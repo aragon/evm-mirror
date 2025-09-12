@@ -23,9 +23,9 @@ export async function fetchContractSource(
     throw new Error("An API key is required for chain ID " + chainId);
   }
 
-  console.log(gray(`\nFetching source code for ${bold(contractAddress)}...`));
+  console.log(gray(`Fetching sources for ${bold(contractAddress)}...`));
 
-  const url = `${endpoint.url}/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${apiKey}`;
+  const url = `${endpoint.urlPrefix}&address=${contractAddress}&apikey=${apiKey}`;
 
   const response = await fetch(url);
   if (!response.ok) {

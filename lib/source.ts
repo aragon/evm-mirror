@@ -23,7 +23,7 @@ export async function compareSources(
 ): Promise<void> {
   console.log(
     gray(
-      `\nComparing ${sources.size} source file(s) against local directory: ${bold(localPath)}\n`,
+      `Comparing ${sources.size} source file(s) against ${bold(localPath)}\n`,
     ),
   );
   let matchCount = 0;
