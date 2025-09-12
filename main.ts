@@ -13,38 +13,45 @@ import { CliArguments } from "./lib/types.ts";
  *
  * @usage
  * deno run --allow-net --allow-read main.ts \
- *   --contract <CONTRACT_ADDRESS> \
- *   --api-key <ETHERSCAN_API_KEY> \
  *   --source-root /path/to/your/repo \
+ *   --contract <CONTRACT_ADDRESS> \
+ *   --chain-id <CHAIN_ID> \
+ *   --api-key <ETHERSCAN_API_KEY> \
  *   --remappings /path/to/your/repo/remappings.txt
  *
  * @flags
- * --contract      (Required) The address of the smart contract to verify.
- * --api-key       (Required) Your Etherscan API key.
  * --source-root   (Required) The root path of the source code folder.
+ * --contract      (Required) The address of the smart contract to verify.
+ * --chain-id      (Optional) The chain ID of the network.
+ * --api-key       (Optional) Your Etherscan API key, required for most chains.
  * --remappings    (Optional) Path of the remappings.txt file (Foundry)
  *                 By default, it reads remappings.txt from the given local path
  */
 async function main() {
   const argv = await yargs(Deno.args)
     .usage("Usage: $0 [options]")
+    .option("source-root", {
+      alias: "r",
+      describe: "Root path of the source code",
+      type: "string",
+      demandOption: true,
+    })
     .option("contract", {
       alias: "c",
       describe: "The address of the smart contract",
       type: "string",
       demandOption: true,
     })
+    .option("chain-id", {
+      alias: "i",
+      describe: "Chain ID of the network",
+      type: "string",
+      default: "1",
+    })
     .option("api-key", {
       alias: "k",
       describe: "Etherscan API Key",
       type: "string",
-      demandOption: true,
-    })
-    .option("source-root", {
-      alias: "r",
-      describe: "Root path of the source code",
-      type: "string",
-      demandOption: true,
     })
     .option("remappings", {
       alias: "m",
@@ -56,14 +63,19 @@ async function main() {
     .help().argv;
 
   try {
-    const { contract, apiKey, sourceRoot } = argv as CliArguments;
+    const { contract, apiKey, chainId, sourceRoot } = argv as CliArguments;
     let { remappings: remappingsFile } = argv as CliArguments;
 
-    if (!remappingsFile?.trim())
+    if (!remappingsFile?.trim()) {
       remappingsFile = join(sourceRoot, "remappings.txt");
+    }
     const remappings = await loadRemappings(remappingsFile!);
 
-    const sourceResult = await fetchContractSource(contract, apiKey);
+    const sourceResult = await fetchContractSource(
+      contract,
+      chainId as any,
+      apiKey,
+    );
     const sources = parseSourceCode(sourceResult);
 
     if (sources.size === 0) {
@@ -73,7 +85,7 @@ async function main() {
 
     await compareSources(sources, sourceRoot, remappings);
   } catch (error: any) {
-    console.error(red(`\nAn error occurred: ${error.message}`));
+    console.error(red(`\nError: ${error.message}`));
     Deno.exit(1);
   }
 }

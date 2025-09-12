@@ -1,9 +1,9 @@
+import { red, bold, gray } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { ETHERSCAN_ENDPOINTS } from "./constants.ts";
 import {
   EtherscanSourceResult,
   EtherscanSoliditySourceEntries,
 } from "./types.ts";
-import { red, bold, gray } from "https://deno.land/std@0.224.0/fmt/colors.ts";
-import { ETHERSCAN_DOMAIN } from "./constants.ts";
 
 /**
  * Fetches the verified source code for a contract from the Etherscan API.
@@ -13,16 +13,24 @@ import { ETHERSCAN_DOMAIN } from "./constants.ts";
  */
 export async function fetchContractSource(
   contractAddress: string,
-  apiKey: string,
+  chainId: keyof typeof ETHERSCAN_ENDPOINTS,
+  apiKey: string = "",
 ): Promise<EtherscanSourceResult> {
+  const endpoint = ETHERSCAN_ENDPOINTS[chainId];
+  if (!endpoint) {
+    throw new Error("Unsupported chain ID: " + chainId);
+  } else if (endpoint.requiresApiKey && !apiKey) {
+    throw new Error("An API key is required for chain ID " + chainId);
+  }
+
   console.log(gray(`\nFetching source code for ${bold(contractAddress)}...`));
-  const url = `https://${ETHERSCAN_DOMAIN}/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${apiKey}`;
+
+  const url = `${endpoint.url}/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${apiKey}`;
 
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
-
   const data = await response.json();
   if (data.status !== "1") {
     throw new Error(`Etherscan API Error: ${data.message} - ${data.result}`);
@@ -41,27 +49,35 @@ export function parseSourceCode(
   sourceResult: EtherscanSourceResult,
 ): Map<string, string> {
   let sourceCode = sourceResult.SourceCode;
-  const sources = new Map<string, string>();
+  if (
+    !sourceCode ||
+    sourceResult.ABI?.trim() === "Contract source code not verified"
+  ) {
+    throw new Error("The contract source is not verified");
+  }
 
-  // Check for Standard JSON-Input format
+  const result = new Map<string, string>();
+
   if (sourceCode.startsWith("{{") && sourceCode.endsWith("}}")) {
+    // Standard JSON-Input format
     sourceCode = sourceCode.slice(1, -1); // Remove the outer braces
+
     try {
       const jsonInput: EtherscanSoliditySourceEntries = JSON.parse(sourceCode);
       if (jsonInput.sources) {
         for (const path in jsonInput.sources) {
-          sources.set(path, jsonInput.sources[path].content);
+          result.set(path, jsonInput.sources[path].content);
         }
       }
     } catch (error) {
       console.error(red("Failed to parse Solidity JSON-Input:"), error);
-      // Fallback for weirdly formatted single files
-      sources.set(`${sourceResult.ContractName}.sol`, sourceCode);
+      // Fallback for single files with weird formats
+      result.set(`${sourceResult.ContractName}.sol`, sourceCode);
     }
   } else {
-    // Single file
-    sources.set(`${sourceResult.ContractName}.sol`, sourceCode);
+    // Single file source
+    result.set(`${sourceResult.ContractName}.sol`, sourceCode);
   }
 
-  return sources;
+  return result;
 }
