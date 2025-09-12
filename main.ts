@@ -1,8 +1,12 @@
 import yargs from "npm:yargs";
-import { red, yellow } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import {
+  green,
+  red,
+  yellow,
+} from "https://deno.land/std@0.224.0/fmt/colors.ts";
 import { join } from "https://deno.land/std@0.224.0/path/posix/mod.ts";
 import { fetchContractSource, parseSourceCode } from "./lib/etherscan.ts";
-import { compareSources } from "./lib/source.ts";
+import { compareSources, displayResults } from "./lib/source.ts";
 import { loadRemappings } from "./lib/foundry.ts";
 import { CliArguments } from "./lib/types.ts";
 
@@ -65,6 +69,7 @@ async function main() {
     .parse();
 
   try {
+    let hasIssues = false;
     const { contracts, apiKey, chainId, sourceRoot } = argv as CliArguments;
     let { remappings: remappingsFile } = argv as CliArguments;
 
@@ -92,7 +97,29 @@ async function main() {
         continue;
       }
 
-      await compareSources(contractSources, sourceRoot, remappings);
+      const results = await compareSources(
+        contractSources,
+        sourceRoot,
+        remappings,
+      );
+      displayResults(results);
+      console.log();
+
+      if (results.some((item) => item.status !== "match")) {
+        hasIssues = true;
+      }
+    }
+
+    if (!hasIssues) {
+      console.error(
+        green(
+          `All contracts match the source code within the ${sourceRoot} directory`,
+        ),
+      );
+    } else {
+      console.error(red("One or more contracts could not be verified"));
+
+      Deno.exit(1);
     }
   } catch (error: any) {
     console.error(red(`\nError: ${error.message}`));

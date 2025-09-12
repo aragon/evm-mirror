@@ -10,6 +10,22 @@ import {
 } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 import { Remappings } from "./types.ts";
 
+type CompareResult =
+  | {
+      status: "match";
+      path: string;
+    }
+  | {
+      status: "mismatch";
+      path: string;
+      diff: string;
+    }
+  | {
+      status: "not-found" | "error";
+      path: string;
+      expectedPath: string;
+    };
+
 /**
  * Compares the fetched source files against their local counterparts.
  * @param sources A map of Etherscan file paths to their content.
@@ -20,15 +36,13 @@ export async function compareSources(
   sources: Map<string, string>,
   localPath: string,
   remappings: Remappings,
-): Promise<void> {
+): Promise<Array<CompareResult>> {
   console.log(
     gray(
       `Comparing ${sources.size} source file(s) against ${bold(localPath)}\n`,
     ),
   );
-  let matchCount = 0;
-  let diffCount = 0;
-  let notFoundCount = 0;
+  const result = [] as CompareResult[];
 
   for (const [etherscanPath, etherscanContent] of sources.entries()) {
     const resolvedPath = resolveLocalPath(etherscanPath, localPath, remappings);
@@ -40,36 +54,72 @@ export async function compareSources(
       const normalizedLocal = normalizeLineEndings(localContent);
 
       if (normalizedEtherscan === normalizedLocal) {
-        console.log(`${green("[MATCH]")} ${etherscanPath}`);
-        matchCount++;
+        result.push({ status: "match", path: etherscanPath });
       } else {
-        console.log(`${yellow("[DIFF]")}  ${etherscanPath}`);
-        diffCount++;
-        const patch = diff(normalizedLocal, normalizedEtherscan, {
-          colors: true,
+        result.push({
+          status: "mismatch",
+          path: etherscanPath,
+          diff: diff(normalizedLocal, normalizedEtherscan, {
+            colors: true,
+          }),
         });
-        console.log(patch);
       }
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
-        console.log(`${red("[NOT FOUND]")} ${etherscanPath}`);
-        console.log(gray(`  > Expected at: ${resolvedPath}`));
-        notFoundCount++;
+        result.push({
+          status: "not-found",
+          path: etherscanPath,
+          expectedPath: resolvedPath,
+        });
       } else {
+        result.push({
+          status: "error",
+          path: etherscanPath,
+          expectedPath: resolvedPath,
+        });
         console.error(red(`Error reading local file ${resolvedPath}:`), error);
       }
     }
   }
+  return result;
+}
 
-  // --- Summary ---
-  console.log();
-  if (matchCount) {
-    console.log(green(`${matchCount} file(s) matched.`));
+export function displayResults(results: Array<CompareResult>) {
+  let matches = 0;
+  let mismatches = 0;
+  let notFoundCount = 0;
+  let errorCount = 0;
+
+  for (const item of results) {
+    if (item.status === "match") {
+      console.log(`${green("[MATCH]")} ${item.path}`);
+      matches++;
+    } else if (item.status === "mismatch") {
+      console.log(`${red("[MISMATCH]")}  ${item.path}`);
+      console.log(item.diff + "\n");
+      mismatches++;
+    } else if (item.status === "not-found") {
+      console.log(`${red("[NOT FOUND]")} ${item.path}`);
+      console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
+      notFoundCount++;
+    } else if (item.status === "error") {
+      console.log(`${red("[ERROR]")} ${item.path}`);
+      console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
+      errorCount++;
+    }
   }
-  if (diffCount) {
-    console.log(red(`${diffCount} file(s) had differences.`));
+
+  console.log();
+  if (matches) {
+    console.log(green(`${matches} file(s) matched`));
+  }
+  if (mismatches) {
+    console.log(red(`${mismatches} file(s) had mismatches`));
   }
   if (notFoundCount) {
-    console.log(red(`${notFoundCount} file(s) were not found locally.`));
+    console.log(red(`${notFoundCount} file(s) were not found locally`));
+  }
+  if (errorCount) {
+    console.log(red(`${errorCount} file(s) could not be read locally`));
   }
 }
