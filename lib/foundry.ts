@@ -34,7 +34,10 @@ export async function loadRemappings(
     return result;
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
-      console.log(`${red("[NOT FOUND]")} ${remappingsFile}`);
+      console.log(
+        `${yellow("Warning: " + remappingsFile + " could not be found")}`,
+      );
+      return {};
     } else {
       console.error(red(`Error reading local file ${remappingsFile}:`), error);
     }

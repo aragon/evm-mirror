@@ -7,9 +7,10 @@ import {
 
 /**
  * Fetches the verified source code for a contract from the Etherscan API.
- * @param contractAddress The address of the smart contract verify.
+ * @param contractAddress The address of the smart contract to verify.
+ * @param chainId The ID of the target chain.
  * @param apiKey The Etherscan API key.
- * @returns The source code and contract name.
+ * @returns The full details of the contract, if available.
  */
 export async function fetchContractSource(
   contractAddress: string,

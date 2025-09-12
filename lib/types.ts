@@ -1,5 +1,5 @@
 export type CliArguments = {
-  contract: string;
+  contracts: string[];
   chainId: string;
   apiKey: string;
   sourceRoot: string;

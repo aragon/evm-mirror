@@ -14,14 +14,13 @@ import { CliArguments } from "./lib/types.ts";
  * @usage
  * deno run --allow-net --allow-read main.ts \
  *   --source-root /path/to/your/repo \
- *   --contract <CONTRACT_ADDRESS> \
  *   --chain-id <CHAIN_ID> \
  *   --api-key <ETHERSCAN_API_KEY> \
- *   --remappings /path/to/your/repo/remappings.txt
+ *   --remappings /path/to/your/repo/remappings.txt \
+ *   [contracts...]
  *
  * @flags
  * --source-root   (Required) The root path of the source code folder.
- * --contract      (Required) The address of the smart contract to verify.
  * --chain-id      (Optional) The chain ID of the network.
  * --api-key       (Optional) Your Etherscan API key, required for most chains.
  * --remappings    (Optional) Path of the remappings.txt file (Foundry)
@@ -29,16 +28,10 @@ import { CliArguments } from "./lib/types.ts";
  */
 async function main() {
   const argv = await yargs(Deno.args)
-    .usage("Usage: $0 [options]")
+    .usage("Usage: $0 [options] [contracts...]")
     .option("source-root", {
       alias: "r",
       describe: "Root path of the source code",
-      type: "string",
-      demandOption: true,
-    })
-    .option("contract", {
-      alias: "c",
-      describe: "The address of the smart contract",
       type: "string",
       demandOption: true,
     })
@@ -58,32 +51,49 @@ async function main() {
       describe: "Optional path to the remappings.txt file",
       type: "string",
     })
+    .command(
+      "$0 <contracts...>",
+      "The default command for processing contracts",
+      (yargs: any) => {
+        yargs.positional("contracts", {
+          describe: "The list of addresses to verify",
+          type: "string",
+        });
+      },
+    )
     .version("Mirror version 0.1.0")
-    .strict()
-    .help().argv;
+    .parse();
 
   try {
-    const { contract, apiKey, chainId, sourceRoot } = argv as CliArguments;
+    const { contracts, apiKey, chainId, sourceRoot } = argv as CliArguments;
     let { remappings: remappingsFile } = argv as CliArguments;
 
+    for (const addr of contracts) {
+      if (!addr || !addr.match(/^0x[0-9a-fA-F]{40}$/)) {
+        throw new Error("Invalid address: " + addr);
+      }
+    }
     if (!remappingsFile?.trim()) {
       remappingsFile = join(sourceRoot, "remappings.txt");
     }
     const remappings = await loadRemappings(remappingsFile!);
 
-    const sourceResult = await fetchContractSource(
-      contract,
-      chainId as any,
-      apiKey,
-    );
-    const sources = parseSourceCode(sourceResult);
+    // Handle each contract
+    for (const address of contracts) {
+      const sourceResult = await fetchContractSource(
+        address,
+        chainId as any,
+        apiKey,
+      );
 
-    if (sources.size === 0) {
-      console.error(yellow("No source files could be fetched from Etherscan."));
-      return;
+      const contractSources = parseSourceCode(sourceResult);
+      if (contractSources.size === 0) {
+        console.warn(yellow(`No source files were received for ${address}.`));
+        continue;
+      }
+
+      await compareSources(contractSources, sourceRoot, remappings);
     }
-
-    await compareSources(sources, sourceRoot, remappings);
   } catch (error: any) {
     console.error(red(`\nError: ${error.message}`));
     Deno.exit(1);
