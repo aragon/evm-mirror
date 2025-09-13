@@ -37,7 +37,7 @@ async function main() {
       alias: "r",
       describe: "Root path of the source code",
       type: "string",
-      demandOption: true,
+      default: "."
     })
     .option("chain-id", {
       alias: "i",
@@ -47,12 +47,12 @@ async function main() {
     })
     .option("api-key", {
       alias: "k",
-      describe: "Etherscan API Key",
+      describe: "API Key (Etherscan)",
       type: "string",
     })
     .option("remappings", {
       alias: "m",
-      describe: "Optional path to the remappings.txt file",
+      describe: "Use a specific remappings.txt file",
       type: "string",
     })
     .command(

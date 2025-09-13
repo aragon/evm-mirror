@@ -1,5 +1,5 @@
 export const ETHERSCAN_ENDPOINTS = {
-  // Etherscan
+  // Etherscan.io
   "1": {
     urlPrefix:
       "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode",
@@ -28,6 +28,11 @@ export const ETHERSCAN_ENDPOINTS = {
   "11155111": {
     urlPrefix:
       "https://api.etherscan.io/v2/api?chainid=11155111&module=contract&action=getsourcecode",
+    requiresApiKey: true,
+  },
+  "17000": {
+    urlPrefix:
+      "https://api.etherscan.io/v2/api?chainid=17000&module=contract&action=getsourcecode",
     requiresApiKey: true,
   },
 
