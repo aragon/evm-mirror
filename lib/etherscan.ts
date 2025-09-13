@@ -1,4 +1,4 @@
-import { red, bold, gray } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { red, bold, gray } from "jsr:@std/fmt/colors";
 import { ETHERSCAN_ENDPOINTS } from "./constants.ts";
 import {
   EtherscanSourceResult,

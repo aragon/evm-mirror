@@ -25,7 +25,7 @@ Manually comparing 50 files for each contract on multiple chains is tedious, tim
 - **Secure by default**
   - Deno's permission model prevents supply chain attacks from indirect NPM dependencies.
   - Minimal permissions enabled (network and read-only file access).
-  - Minimal dependencies. EVM Mirror only uses `@std/cli`, `@std/path` and `@libs/diff` from JSR.
+  - Minimal dependencies. EVM Mirror only uses packages from `@std/*` and `@libs/diff` from JSR.
 
 ## Get Started
 

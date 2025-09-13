@@ -1,10 +1,6 @@
 import { parseArgs } from "jsr:@std/cli/parse-args";
-import {
-  green,
-  red,
-  yellow,
-} from "https://deno.land/std@0.224.0/fmt/colors.ts";
-import { join } from "https://deno.land/std@0.224.0/path/posix/mod.ts";
+import { green, red, yellow } from "jsr:@std/fmt/colors";
+import { join } from "jsr:@std/path";
 import { fetchContractSource, parseSourceCode } from "./lib/etherscan.ts";
 import { compareSources, displayResults } from "./lib/source.ts";
 import { loadRemappings } from "./lib/foundry.ts";
@@ -63,7 +59,7 @@ async function main() {
     if (!contracts?.length) {
       showHelp();
       console.log();
-      throw new Error("At least one contract address is required");
+      console.log("At least one contract address is required");
       Deno.exit(1);
     }
 
