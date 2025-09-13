@@ -6,18 +6,26 @@ Inspired by the great [DiffyScan](https://github.com/lidofinance/diffyscan) from
 
 ## The Problem
 
-Smart contract audits are performed against a specific Git commit hash, and contract source code is typically verified on block explorers like Etherscan. But a critical verification gap remains: how can you check that the code verified on-chain is the *exact* same code that was audited?
+Smart contract audits are performed against a specific Git commit hash, and contract source code is typically verified on block explorers like Etherscan.
 
-Manually comparing dozens of files for multiple contracts and chains is tedious, time-consuming, and prone to error. EVM Mirror automates this process, providing a definitive answer in seconds.
+But a critical verification gap remains: how can you check that the code verified on-chain is the *exact* same code that was audited?
+
+Manually comparing 50 files for each contract on multiple chains is tedious, time-consuming, and prone to error. EVM Mirror automates this process and provides an answer in seconds.
 
 ## Why EVM Mirror?
 
-- **Foundry First**: Built for Foundry projects, it automatically handles `remappings.txt` to correctly resolve import paths.
-- **Minimal Requirements**: No Python, no Docker, and no GitHub personal access tokens. All you need is a list of contract addresses, your local Git repository, and an Etherscan API key for certain networks.
+- **Foundry First**: Built for Foundry projects, it automatically handles `remappings.txt` to correctly resolve import paths. It can also work in other environments with the appropriate remappings as well.
+- **Minimal Requirements**:
+  - No Python, no Docker. No GitHub personal access tokens.
+  - You just need a list of contract addresses, your local Git repository and an Etherscan API key for certain networks.
 - **Modern and Flexible**:
   - Supports Etherscan's V2 multi-chain API, allowing a single API key to work across all supported networks.
   - Automatically detects the endpoint for the given Chain ID (Etherscan, Routescan).
   - Can be used as a standalone binary or as a Deno script within your existing TypeScript/JavaScript projects.
+- **Secure by default**
+  - Deno's permission model prevents supply chain attacks from indirect NPM dependencies.
+  - Minimal permissions enabled (network and read-only file access).
+  - Minimal dependencies. EVM Mirror only uses `@std/cli`, `@std/path` and `@libs/diff` from JSR.
 
 ## Get Started
 
@@ -49,7 +57,7 @@ This command checks contracts on the Sepolia testnet against a specified source 
   0x1234... 0x2345...
 ```
 
-### Using Deno
+### Using with Deno
 
 If you have Deno installed, you can run EVM Mirror directly from the source code.
 
@@ -84,16 +92,16 @@ You can compile the standalone binary from the source code using Deno.
 
 ```sh
 # For Linux (x86_64)
-deno compile --allow-net --allow-read --target x86_64-unknown-linux-gnu -o mirror main.ts
+deno task build:linux
 
 # For macOS (Apple Silicon)
-deno compile --allow-net --allow-read --target aarch64-apple-darwin -o mirror main.ts
+deno task build:macos
 
 # For macOS (x86_64)
-deno compile --allow-net --allow-read --target x86_64-apple-darwin -o mirror main.ts
+deno task build:macos:x86
 
 # For Windows (x86_64)
-deno compile --allow-net --allow-read --target x86_64-pc-windows-msvc -o mirror.exe main.ts
+deno task build:win
 ```
 
 The compiled binary will be available in the project root.
@@ -102,4 +110,4 @@ The compiled binary will be available in the project root.
 
 Contributions are welcome! The easiest way to contribute is by expanding the list of supported networks.
 
-To add a new Etherscan-compatible chain, please open a pull request that adds the network's details to the `chains.ts` configuration file. Ensure you include the chain ID and the API base URL.
+To add a new Etherscan-compatible chain or improve EVM Mirror, feel free to open a pull request.
