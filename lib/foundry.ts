@@ -1,4 +1,4 @@
-import { red, yellow } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { red, yellow } from "jsr:@std/fmt/colors";
 import { Remappings } from "./types.ts";
 import { normalizeLineEndings } from "./text.ts";
 

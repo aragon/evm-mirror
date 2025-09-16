@@ -1,9 +1,12 @@
 export type CliArguments = {
-  contracts: string[];
+  _: string[];
   chainId: string;
   apiKey: string;
   sourceRoot: string;
   remappings?: string;
+  // General
+  version?: boolean;
+  help?: boolean;
 };
 
 export interface EtherscanSourceResult {

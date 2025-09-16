@@ -1,14 +1,11 @@
-import yargs from "npm:yargs";
-import {
-  green,
-  red,
-  yellow,
-} from "https://deno.land/std@0.224.0/fmt/colors.ts";
-import { join } from "https://deno.land/std@0.224.0/path/posix/mod.ts";
+import { parseArgs } from "jsr:@std/cli/parse-args";
+import { green, red, yellow } from "jsr:@std/fmt/colors";
+import { join } from "jsr:@std/path";
 import { fetchContractSource, parseSourceCode } from "./lib/etherscan.ts";
 import { compareSources, displayResults } from "./lib/source.ts";
 import { loadRemappings } from "./lib/foundry.ts";
 import { CliArguments } from "./lib/types.ts";
+import { MIRROR_VERSION } from "./lib/constants.ts";
 
 /**
  * @title Etherscan Contract Diff Tool
@@ -31,47 +28,40 @@ import { CliArguments } from "./lib/types.ts";
  *                 By default, it reads remappings.txt from the given local path
  */
 async function main() {
-  const argv = await yargs(Deno.args)
-    .usage("Usage: $0 [options] [contracts...]")
-    .option("source-root", {
-      alias: "r",
-      describe: "Root path of the source code",
-      type: "string",
-      demandOption: true,
-    })
-    .option("chain-id", {
-      alias: "i",
-      describe: "Chain ID of the network",
-      type: "string",
-      default: "1",
-    })
-    .option("api-key", {
-      alias: "k",
-      describe: "Etherscan API Key",
-      type: "string",
-    })
-    .option("remappings", {
-      alias: "m",
-      describe: "Optional path to the remappings.txt file",
-      type: "string",
-    })
-    .command(
-      "$0 <contracts...>",
-      "The default command for processing contracts",
-      (yargs: any) => {
-        yargs.positional("contracts", {
-          describe: "The list of addresses to verify",
-          type: "string",
-        });
-      },
-    )
-    .version("Mirror version 0.1.0")
-    .parse();
+  const args = parseArgs(Deno.args, {
+    string: ["_"],
+    alias: {
+      r: "sourceRoot",
+      i: "chainId",
+      k: "apiKey",
+      m: "remappings",
+      "source-root": "sourceRoot",
+      "chain-id": "chainId",
+      "api-key": "apiKey",
+    },
+  }) as any as CliArguments;
+
+  if (args.help) {
+    return showHelp();
+  } else if (args.version) {
+    return showVersion();
+  }
 
   try {
     let hasIssues = false;
-    const { contracts, apiKey, chainId, sourceRoot } = argv as CliArguments;
-    let { remappings: remappingsFile } = argv as CliArguments;
+
+    const { _: contracts, apiKey } = args;
+    let { chainId, sourceRoot, remappings: remappingsFile } = args;
+
+    if (!chainId) chainId = "1";
+    if (!sourceRoot) sourceRoot = ".";
+
+    if (!contracts?.length) {
+      showHelp();
+      console.log();
+      console.log("At least one contract address is required");
+      Deno.exit(1);
+    }
 
     for (const addr of contracts) {
       if (!addr || !addr.match(/^0x[0-9a-fA-F]{40}$/)) {
@@ -113,7 +103,7 @@ async function main() {
     if (!hasIssues) {
       console.error(
         green(
-          `All contracts match the source code within the ${sourceRoot} directory`,
+          `All the fetched contracts match the source code within the ${sourceRoot} directory`,
         ),
       );
     } else {
@@ -122,9 +112,28 @@ async function main() {
       Deno.exit(1);
     }
   } catch (error: any) {
-    console.error(red(`\nError: ${error.message}`));
+    console.error(red(`Error: ${error.message}`));
     Deno.exit(1);
   }
+}
+
+function showHelp() {
+  console.log(`Usage: mirror [options] [contracts...]
+
+  List:
+    contracts  The list of addresses to verify
+
+  Options:
+    -r, --source-root  Root path of the source code  (default: current directory)
+    -i, --chain-id     Chain ID of the network  (default: 1)
+    -k, --api-key      API Key (Etherscan)
+    -m, --remappings   Use a specific remappings.txt file
+        --version      Show version number
+        --help         Show help`);
+}
+
+function showVersion() {
+  console.log("Mirror", MIRROR_VERSION);
 }
 
 if (import.meta.main) {

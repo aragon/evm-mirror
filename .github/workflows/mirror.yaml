@@ -1,0 +1,103 @@
+name: Continuous Integration & Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # When pushing to main or to a PR
+  check:
+    name: Run Deno Check
+
+    # Run if not a tag
+    if: "!startsWith(github.ref, 'refs/tags/')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run Deno Check
+        run: deno check main.ts
+
+  # Pushing a tag: create a release
+  build-release:
+    name: Build Release Binaries
+
+    if: "startsWith(github.ref, 'refs/tags/')"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - name: mirror-linux-x86_64
+            os: x86_64-unknown-linux-gnu
+            asset_name: mirror
+          - name: mirror-macos-x86_64
+            os: x86_64-apple-darwin
+            asset_name: mirror
+          - name: mirror-macos-aarch64
+            os: aarch64-apple-darwin
+            asset_name: mirror
+          - name: mirror-windows-x86_64
+            os: x86_64-pc-windows-msvc
+            asset_name: mirror.exe
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Compile application
+        run: |
+          deno compile --allow-net --allow-read \
+            --target ${{ matrix.target.os }} \
+            -o ${{ matrix.target.asset_name }} \
+            main.ts
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target.name }}
+          path: ${{ matrix.target.asset_name }}
+          retention-days: 1
+
+  # After build-release
+  create-release:
+    name: Create GitHub Release
+    needs: build-release
+    if: "startsWith(github.ref, 'refs/tags/')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Create the release and upload assets
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded files
+        run: ls -R artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/mirror-linux-x86_64/mirror
+            artifacts/mirror-macos-x86_64/mirror
+            artifacts/mirror-macos-aarch64/mirror
+            artifacts/mirror-windows-x86_64/mirror.exe

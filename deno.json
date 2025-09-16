@@ -1,8 +1,14 @@
 {
-  "tasks": {},
+  "tasks": {
+    "build:linux": "deno compile --allow-net --allow-read --target x86_64-unknown-linux-gnu -o mirror main.ts",
+    "build:macos": "deno compile --allow-net --allow-read --target aarch64-apple-darwin -o mirror main.ts",
+    "build:macos:x86": "deno --allow-net --allow-read compile --target x86_64-apple-darwin -o mirror main.ts",
+    "build:win": "deno compile --allow-net --allow-read --target x86_64-pc-windows-msvc -o mirror.exe main.ts"
+  },
   "imports": {
     "@libs/diff": "jsr:@libs/diff@^3.0.1",
     "@std/assert": "jsr:@std/assert@1",
-    "yargs": "npm:yargs@^18.0.0"
+    "@std/cli": "jsr:@std/cli@^1.0.22",
+    "@std/path": "jsr:@std/path@^1.1.2"
   }
 }

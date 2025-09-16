@@ -1,13 +1,7 @@
 import { diff } from "jsr:@libs/diff";
 import { resolveLocalPath } from "./path.ts";
 import { normalizeLineEndings } from "./text.ts";
-import {
-  green,
-  red,
-  yellow,
-  bold,
-  gray,
-} from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { green, red, bold, gray } from "jsr:@std/fmt/colors";
 import { Remappings } from "./types.ts";
 
 type CompareResult =
