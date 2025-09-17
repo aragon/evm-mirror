@@ -1,3 +1,5 @@
+import { SUPPORTED_CHAIN_IDS } from "./constants.ts";
+
 export type CliArguments = {
   _: string[];
   chainId: string;
@@ -38,3 +40,9 @@ export interface EtherscanSoliditySourceEntries {
 }
 
 export type Remappings = Record<string, string>;
+
+export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
+export type Network = {
+  urlPrefix: string;
+  requiresApiKey: boolean;
+};
