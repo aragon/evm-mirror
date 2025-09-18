@@ -1,8 +1,9 @@
 import { red, bold, gray } from "jsr:@std/fmt/colors";
-import { ETHERSCAN_ENDPOINTS } from "./constants.ts";
+import { getNetworkExplorer } from "./networks.ts";
 import {
   EtherscanSourceResult,
   EtherscanSoliditySourceEntries,
+  SupportedChainId,
 } from "./types.ts";
 
 /**
@@ -14,19 +15,19 @@ import {
  */
 export async function fetchContractSource(
   contractAddress: string,
-  chainId: keyof typeof ETHERSCAN_ENDPOINTS,
+  chainId: SupportedChainId,
   apiKey: string = "",
 ): Promise<EtherscanSourceResult> {
-  const endpoint = ETHERSCAN_ENDPOINTS[chainId];
-  if (!endpoint) {
+  const networkExplorer = getNetworkExplorer(chainId);
+  if (!networkExplorer) {
     throw new Error("Unsupported chain ID: " + chainId);
-  } else if (endpoint.requiresApiKey && !apiKey) {
+  } else if (networkExplorer.requiresApiKey && !apiKey) {
     throw new Error("An API key is required for chain ID " + chainId);
   }
 
   console.log(gray(`Fetching sources for ${bold(contractAddress)}...`));
 
-  const url = `${endpoint.urlPrefix}&address=${contractAddress}&apikey=${apiKey}`;
+  const url = `${networkExplorer.urlPrefix}&address=${contractAddress}&apikey=${apiKey}`;
 
   const response = await fetch(url);
   if (!response.ok) {
