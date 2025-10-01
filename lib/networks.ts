@@ -9,6 +9,8 @@ export function getNetworkExplorer(chainId: SupportedChainId): Network {
     case "10":
     case "11155111":
     case "17000":
+    case "300":
+    case "324":
       return {
         urlPrefix: `https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getsourcecode`,
         requiresApiKey: true,
