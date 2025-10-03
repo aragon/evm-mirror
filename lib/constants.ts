@@ -1,4 +1,4 @@
-export const MIRROR_VERSION = "0.10.0";
+export const MIRROR_VERSION = "0.11.0";
 
 export const SUPPORTED_CHAIN_IDS = [
   // Etherscan
@@ -9,6 +9,8 @@ export const SUPPORTED_CHAIN_IDS = [
   "10",
   "11155111",
   "17000",
+  "300",
+  "324",
 
   // Routescan
   "21000000",

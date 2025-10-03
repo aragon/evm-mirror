@@ -29,7 +29,7 @@ import { MIRROR_VERSION } from "./lib/constants.ts";
  */
 async function main() {
   const args = parseArgs(Deno.args, {
-    string: ["_"],
+    string: ["_", "chain-id"],
     alias: {
       r: "sourceRoot",
       i: "chainId",
