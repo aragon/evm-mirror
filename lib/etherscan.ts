@@ -52,7 +52,7 @@ function parseVerifiedSources(
     !sourceCode ||
     sourceResult.ABI?.trim() === "Contract source code not verified"
   ) {
-    throw new Error("The contract source is not verified");
+    throw new Error("The contract is not verified or does not exist");
   }
 
   const result: ContractSources = {

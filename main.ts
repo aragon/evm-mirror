@@ -186,8 +186,8 @@ Verify options:
   -m, --remappings     Path to remappings.txt file (default: <source-root>/remappings.txt)
 
 Examples:
-  mirror verify --source-root ./src --chain-id 1 --api-key <your-key> <address-1> <address-...>
-  mirror verify <address-1> <address-...> --source-root ./src
+  mirror verify <address-1> <address-...>
+  mirror verify <address-1> <address-...> --source-root ./src --chain-id 1 --api-key <your-key>
   mirror diff <address-A> <address-B>
   mirror diff <address-A> <address-B> --chain-id 10 --api-key <your-key>
 
