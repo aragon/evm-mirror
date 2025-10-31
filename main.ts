@@ -1,8 +1,12 @@
 import { green, red, yellow } from "jsr:@std/fmt/colors";
 import { join } from "jsr:@std/path";
 import { CliArguments, getArguments } from "./lib/cli.ts";
-import { fetchContractSource, parseSourceCode } from "./lib/etherscan.ts";
-import { diffWithLocalPath, printResults } from "./lib/source.ts";
+import { fetchVerifiedSources } from "./lib/etherscan.ts";
+import {
+  diffEtherscanSources,
+  diffWithLocalPath,
+  printDiffResults,
+} from "./lib/source.ts";
 import { loadRemappings } from "./lib/foundry.ts";
 import { MIRROR_VERSION } from "./lib/constants.ts";
 
@@ -36,7 +40,9 @@ async function main() {
       await diffContracts(args);
       break;
     default:
-      console.error("Unrecognized command: use 'verify' or 'diff'");
+      if (command) {
+        console.error("Unrecognized command: use 'verify' or 'diff'");
+      }
       showHelp();
       Deno.exit(1);
   }
@@ -46,8 +52,7 @@ async function main() {
 
 async function verifyContracts(args: CliArguments) {
   const contracts = args._.slice(1);
-  const { apiKey } = args;
-  let { chainId, sourceRoot, remappings: remappingsFile } = args;
+  let { chainId, apiKey, sourceRoot, remappings: remappingsFile } = args;
 
   if (!chainId) chainId = "1";
   if (!sourceRoot) sourceRoot = ".";
@@ -72,24 +77,23 @@ async function verifyContracts(args: CliArguments) {
   let hasIssues = false;
 
   for (const address of contracts) {
-    const sourceResult = await fetchContractSource(
+    const contractInfo = await fetchVerifiedSources(
       address,
       chainId as any,
       apiKey,
     );
-    const contractSources = parseSourceCode(sourceResult);
 
-    if (contractSources.size === 0) {
+    if (Object.keys(contractInfo.sources).length === 0) {
       console.warn(yellow(`No source files were received for ${address}.`));
       continue;
     }
 
     const results = await diffWithLocalPath(
-      contractSources,
+      contractInfo,
       sourceRoot,
       remappings,
     );
-    printResults(results);
+    printDiffResults(results);
     console.log();
 
     if (results.some((item) => item.status !== "match")) {
@@ -110,7 +114,58 @@ async function verifyContracts(args: CliArguments) {
 }
 
 async function diffContracts(args: CliArguments) {
-  console.log(yellow("The diff command is not implemented yet."));
+  if (args._.length !== 3) {
+    console.error("Two contract addresses are required to perform a diff.");
+    showHelp();
+    Deno.exit(1);
+  }
+
+  const [addressA, addressB] = args._.slice(1);
+  let { chainId, apiKey } = args;
+
+  if (!chainId) chainId = "1";
+
+  if (!addressA || !addressA.match(/^0x[0-9a-fA-F]{40}$/)) {
+    throw new Error("Invalid address: " + addressA);
+  } else if (!addressB || !addressB.match(/^0x[0-9a-fA-F]{40}$/)) {
+    throw new Error("Invalid address: " + addressB);
+  }
+
+  let hasIssues = false;
+
+  const contractA = await fetchVerifiedSources(
+    addressA,
+    chainId as any,
+    apiKey,
+  );
+  const contractB = await fetchVerifiedSources(
+    addressB,
+    chainId as any,
+    apiKey,
+  );
+
+  if (Object.keys(contractA.sources).length === 0) {
+    throw new Error(`No source files were received for ${contractA.address}.`);
+  } else if (Object.keys(contractB.sources).length === 0) {
+    throw new Error(`No source files were received for ${contractB.address}.`);
+  }
+
+  const results = diffEtherscanSources(contractA, contractB);
+  printDiffResults(results);
+  console.log();
+
+  if (results.some((item) => item.status !== "match")) {
+    hasIssues = true;
+  }
+
+  if (!hasIssues) {
+    console.error(
+      green(`The source code of the provided addresses match each other`),
+    );
+  } else {
+    console.error(red("One or more source files differ"));
+    Deno.exit(1);
+  }
 }
 
 // Global
@@ -119,18 +174,22 @@ function showHelp() {
   console.log(`Usage: mirror <command> [options] [contracts...]
 
 Commands:
-  verify   Fetch and compare contract source code from Etherscan
-  diff     (Not implemented) Show differences between contracts
+  verify     Fetch and compare contract source code from Etherscan
+  diff       Show the diff between two on-chain contracts
 
 Options:
-  -r, --source-root  Root path of the source code (default: current directory)
-  -i, --chain-id     Chain ID of the network (default: 1)
-  -k, --api-key      Etherscan API key
-  -m, --remappings   Path to remappings.txt file (default: <source-root>/remappings.txt)
+  -i, --chain-id       Chain ID of the network (default: 1)
+  -k, --api-key        Etherscan API key
+
+Verify options:
+  -r, --source-root    Root path of the source code (default: \$PWD)
+  -m, --remappings     Path to remappings.txt file (default: <source-root>/remappings.txt)
 
 Examples:
-  mirror verify --source-root ./src --chain-id 1 --api-key YOUR_KEY 0x... 0x...
-  mirror verify 0x... --source-root ./src
+  mirror verify --source-root ./src --chain-id 1 --api-key <your-key> <address-1> <address-...>
+  mirror verify <address-1> <address-...> --source-root ./src
+  mirror diff <address-A> <address-B>
+  mirror diff <address-A> <address-B> --chain-id 10 --api-key <your-key>
 
 Global flags:
   --version    Show version

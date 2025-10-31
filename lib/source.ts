@@ -2,7 +2,7 @@ import { diff } from "jsr:@libs/diff";
 import { resolveLocalPath } from "./path.ts";
 import { normalizeLineEndings } from "./text.ts";
 import { green, red, bold, gray } from "jsr:@std/fmt/colors";
-import { Remappings } from "./types.ts";
+import { ContractSources, Remappings } from "./types.ts";
 
 type DiffResult =
   | {
@@ -17,7 +17,7 @@ type DiffResult =
   | {
       status: "not-found" | "error";
       path: string;
-      expectedPath: string;
+      expectedPath?: string;
     };
 
 /**
@@ -27,18 +27,19 @@ type DiffResult =
  * @param remappings A map of import prefixes to local directory paths.
  */
 export async function diffWithLocalPath(
-  sources: Map<string, string>,
+  sources: ContractSources,
   localPath: string,
   remappings: Remappings,
 ): Promise<Array<DiffResult>> {
   console.log(
     gray(
-      `Comparing ${sources.size} source file(s) against ${bold(localPath)}\n`,
+      `Comparing ${Object.keys(sources.sources).length} source file(s) against ${bold(localPath)}\n`,
     ),
   );
   const result = [] as DiffResult[];
 
-  for (const [etherscanPath, etherscanContent] of sources.entries()) {
+  for (const etherscanPath in sources.sources) {
+    const etherscanContent = sources.sources[etherscanPath];
     const resolvedPath = resolveLocalPath(etherscanPath, localPath, remappings);
 
     try {
@@ -78,7 +79,68 @@ export async function diffWithLocalPath(
   return result;
 }
 
-export function printResults(results: Array<DiffResult>) {
+/**
+ * Compares the fetched source files against their local counterparts.
+ * @param sourcesA A map of Etherscan file paths to their content.
+ * @param sourcesB A map of Etherscan file paths to their content.
+ */
+export function diffEtherscanSources(
+  sourcesA: ContractSources,
+  sourcesB: ContractSources,
+): Array<DiffResult> {
+  console.log(
+    gray(
+      `Comparing ${Object.keys(sourcesA.sources).length} source file(s) from ${sourcesA.address} against ${Object.keys(sourcesB.sources).length} source file(s) from ${sourcesB.address}\n`,
+    ),
+  );
+  const result = [] as DiffResult[];
+
+  // Compare A against B
+  for (const filePathA in sourcesA.sources) {
+    const sourceA = sourcesA.sources[filePathA];
+    if (typeof sourceA !== "string") {
+      throw new Error("Unexpected empty source code");
+    }
+
+    const sourceB = sourcesB.sources[filePathA];
+    if (typeof sourceB !== "string") {
+      result.push({
+        status: "not-found",
+        path: "b/" + filePathA,
+      });
+      continue;
+    }
+
+    const normalizedA = normalizeLineEndings(sourceA);
+    const normalizedB = normalizeLineEndings(sourceB);
+
+    if (normalizedA === normalizedB) {
+      result.push({ status: "match", path: filePathA });
+    } else {
+      result.push({
+        status: "mismatch",
+        path: filePathA,
+        diff: diff(normalizedA, normalizedB, {
+          colors: true,
+        }),
+      });
+    }
+  }
+
+  // Check files on B that are not present on A
+  for (const filePathB in sourcesB.sources) {
+    if (typeof sourcesA.sources[filePathB] !== "string") {
+      result.push({
+        status: "not-found",
+        path: "a/" + filePathB,
+      });
+    }
+  }
+
+  return result;
+}
+
+export function printDiffResults(results: Array<DiffResult>) {
   let matches = 0;
   let mismatches = 0;
   let notFoundCount = 0;
@@ -94,11 +156,15 @@ export function printResults(results: Array<DiffResult>) {
       mismatches++;
     } else if (item.status === "not-found") {
       console.log(`${red("[NOT FOUND]")} ${item.path}`);
-      console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
+      if (item.expectedPath) {
+        console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
+      }
       notFoundCount++;
     } else if (item.status === "error") {
       console.log(`${red("[ERROR]")} ${item.path}`);
-      console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
+      if (item.expectedPath) {
+        console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
+      }
       errorCount++;
     }
   }
