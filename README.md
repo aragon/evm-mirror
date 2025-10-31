@@ -31,9 +31,9 @@ Manually comparing 50 files for each contract on multiple chains is tedious, tim
 
 ### Using the Standalone Binary
 
-1.  Download the latest release for your operating system and architecture from the [Releases](https://github.com/aragon/evm-mirror/releases) page.
-2.  Make the binary executable. For Linux/macOS:
-    `chmod +x mirror`
+1.  Download the latest release from the [Releases](https://github.com/aragon/evm-mirror/releases) page.
+2.  Make the binary executable (on Linux/macOS:
+    `chmod +x mirror`)
 3.  Run the tool
 
 **Basic Example**
@@ -41,7 +41,7 @@ Manually comparing 50 files for each contract on multiple chains is tedious, tim
 This command checks the provided contract addresses against the source code within the current directory on Ethereum Mainnet.
 
 ```sh
-./mirror --api-key <YOUR_ETHERSCAN_API_KEY> 0x1234... 0x2345...
+mirror --api-key <YOUR_ETHERSCAN_API_KEY> 0x1234... 0x2345...
 ```
 
 **Full Example**
@@ -49,12 +49,12 @@ This command checks the provided contract addresses against the source code with
 This command checks contracts on the Sepolia testnet against a specified source directory and `remappings.txt` file.
 
 ```sh
-./mirror \
+mirror \
   --api-key <YOUR_ETHERSCAN_API_KEY> \
   --source-root ../my-foundry-project \
   --remappings ../my-foundry-project/remappings.txt \
   --chain-id 11155111 \
-  0x1234... 0x2345...
+  0x1234... 0x2345...  # list of contracts
 ```
 
 ### Using with Deno

@@ -4,7 +4,7 @@ import { normalizeLineEndings } from "./text.ts";
 import { green, red, bold, gray } from "jsr:@std/fmt/colors";
 import { Remappings } from "./types.ts";
 
-type CompareResult =
+type DiffResult =
   | {
       status: "match";
       path: string;
@@ -26,17 +26,17 @@ type CompareResult =
  * @param localPath The root directory of the local project.
  * @param remappings A map of import prefixes to local directory paths.
  */
-export async function compareSources(
+export async function diffWithLocalPath(
   sources: Map<string, string>,
   localPath: string,
   remappings: Remappings,
-): Promise<Array<CompareResult>> {
+): Promise<Array<DiffResult>> {
   console.log(
     gray(
       `Comparing ${sources.size} source file(s) against ${bold(localPath)}\n`,
     ),
   );
-  const result = [] as CompareResult[];
+  const result = [] as DiffResult[];
 
   for (const [etherscanPath, etherscanContent] of sources.entries()) {
     const resolvedPath = resolveLocalPath(etherscanPath, localPath, remappings);
@@ -78,7 +78,7 @@ export async function compareSources(
   return result;
 }
 
-export function displayResults(results: Array<CompareResult>) {
+export function printResults(results: Array<DiffResult>) {
   let matches = 0;
   let mismatches = 0;
   let notFoundCount = 0;
@@ -111,9 +111,9 @@ export function displayResults(results: Array<CompareResult>) {
     console.log(red(`${mismatches} file(s) had mismatches`));
   }
   if (notFoundCount) {
-    console.log(red(`${notFoundCount} file(s) were not found locally`));
+    console.log(red(`${notFoundCount} file(s) could not be found`));
   }
   if (errorCount) {
-    console.log(red(`${errorCount} file(s) could not be read locally`));
+    console.log(red(`${errorCount} file(s) could not be read`));
   }
 }

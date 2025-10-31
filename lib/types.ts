@@ -1,15 +1,6 @@
 import { SUPPORTED_CHAIN_IDS } from "./constants.ts";
 
-export type CliArguments = {
-  _: string[];
-  chainId: string;
-  apiKey: string;
-  sourceRoot: string;
-  remappings?: string;
-  // General
-  version?: boolean;
-  help?: boolean;
-};
+// External type definitions
 
 export interface EtherscanSourceResult {
   SourceCode: string;
@@ -38,6 +29,8 @@ export interface EtherscanSoliditySourceEntries {
     };
   };
 }
+
+// Internal parameters
 
 export type Remappings = Record<string, string>;
 

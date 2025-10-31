@@ -1,13 +1,48 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@cross/deepmerge@1": "1.0.0",
+    "jsr:@cross/env@1": "1.0.3",
+    "jsr:@cross/fs@~0.1.11": "0.1.13",
+    "jsr:@cross/runtime@1": "1.2.1",
+    "jsr:@cross/utils@*": "0.16.0",
     "jsr:@libs/diff@*": "3.0.1",
     "jsr:@std/cli@*": "1.0.22",
     "jsr:@std/fmt@*": "1.0.8",
     "jsr:@std/internal@^1.0.10": "1.0.10",
-    "jsr:@std/path@*": "1.1.2"
+    "jsr:@std/path@*": "1.1.2",
+    "jsr:@std/path@^1.0.8": "1.1.2",
+    "npm:@types/node@*": "24.2.0"
   },
   "jsr": {
+    "@cross/deepmerge@1.0.0": {
+      "integrity": "1e1318a74e31ba1959b9aa0acae8bd417b806f74ffd25ac07c90e12f83ad6b1d"
+    },
+    "@cross/env@1.0.3": {
+      "integrity": "218d2dd68bec55cf047d1670a8bddc304b9c011a8ad22e647afa916bb796c8b4",
+      "dependencies": [
+        "jsr:@cross/deepmerge",
+        "jsr:@cross/runtime"
+      ]
+    },
+    "@cross/fs@0.1.13": {
+      "integrity": "73fefaee0afd4bded3dab53d0af99fedf675c4ccb29707b73f525cb0e7584e8e",
+      "dependencies": [
+        "jsr:@cross/env",
+        "jsr:@cross/runtime",
+        "jsr:@std/path@^1.0.8"
+      ]
+    },
+    "@cross/runtime@1.2.1": {
+      "integrity": "f462fcf2fd678f9073291b4e55209b90f58c8d508764a84205d178abdcf22fc9"
+    },
+    "@cross/utils@0.16.0": {
+      "integrity": "c6333cafd9be41a04c449655120989b8f3601322f7344db30f9d00eef7bc942f",
+      "dependencies": [
+        "jsr:@cross/fs",
+        "jsr:@cross/runtime"
+      ]
+    },
     "@libs/diff@3.0.1": {
       "integrity": "4293f08fc66af9c995eb6964316df29e1b4a4ecc53902e4439cc4e288101f6d4"
     },
@@ -25,6 +60,17 @@
       "dependencies": [
         "jsr:@std/internal"
       ]
+    }
+  },
+  "npm": {
+    "@types/node@24.2.0": {
+      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
+    "undici-types@7.10.0": {
+      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
     }
   },
   "workspace": {

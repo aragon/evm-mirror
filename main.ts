@@ -1,45 +1,25 @@
-import { parseArgs } from "jsr:@std/cli/parse-args";
 import { green, red, yellow } from "jsr:@std/fmt/colors";
 import { join } from "jsr:@std/path";
+import { CliArguments, getArguments } from "./lib/cli.ts";
 import { fetchContractSource, parseSourceCode } from "./lib/etherscan.ts";
-import { compareSources, displayResults } from "./lib/source.ts";
+import { diffWithLocalPath, printResults } from "./lib/source.ts";
 import { loadRemappings } from "./lib/foundry.ts";
-import { CliArguments } from "./lib/types.ts";
 import { MIRROR_VERSION } from "./lib/constants.ts";
 
 /**
- * @title Etherscan Contract Diff Tool
- * @description A Deno script to fetch a contract's verified source code from Etherscan
- * and compare it against a local project directory.
+ * @title Smart contract diff toolkit
+ * @description A CLI tool to compare verified smart contract codebases
  *
  * @usage
- * deno run --allow-net --allow-read main.ts \
- *   --source-root /path/to/your/repo \
- *   --chain-id <CHAIN_ID> \
- *   --api-key <ETHERSCAN_API_KEY> \
- *   --remappings /path/to/your/repo/remappings.txt \
- *   [contracts...]
+ *   mirror verify  --source-root /path/to/your/repo --chain-id 1 --api-key <YOUR_KEY> <address-1> <address-...>
+ *   mirror diff    --chain-id 1 --api-key <YOUR_KEY> <address-1> <address-2>
  *
- * @flags
- * --source-root   (Required) The root path of the source code folder.
- * --chain-id      (Optional) The chain ID of the network.
- * --api-key       (Optional) Your Etherscan API key, required for most chains.
- * --remappings    (Optional) Path of the remappings.txt file (Foundry)
- *                 By default, it reads remappings.txt from the given local path
+ * @flags (global)
+ *   --version    Show version number
+ *   --help       Show help
  */
 async function main() {
-  const args = parseArgs(Deno.args, {
-    string: ["_", "chain-id"],
-    alias: {
-      r: "sourceRoot",
-      i: "chainId",
-      k: "apiKey",
-      m: "remappings",
-      "source-root": "sourceRoot",
-      "chain-id": "chainId",
-      "api-key": "apiKey",
-    },
-  }) as any as CliArguments;
+  const args = getArguments();
 
   if (args.help) {
     return showHelp();
@@ -47,89 +27,114 @@ async function main() {
     return showVersion();
   }
 
-  try {
-    let hasIssues = false;
-
-    const { _: contracts, apiKey } = args;
-    let { chainId, sourceRoot, remappings: remappingsFile } = args;
-
-    if (!chainId) chainId = "1";
-    if (!sourceRoot) sourceRoot = ".";
-
-    if (!contracts?.length) {
+  const [command] = args._;
+  switch (command) {
+    case "verify":
+      await verifyContracts(args);
+      break;
+    case "diff":
+      await diffContracts(args);
+      break;
+    default:
+      console.error("Unrecognized command: use 'verify' or 'diff'");
       showHelp();
-      console.log();
-      console.log("At least one contract address is required");
       Deno.exit(1);
+  }
+}
+
+// Handlers
+
+async function verifyContracts(args: CliArguments) {
+  const contracts = args._.slice(1);
+  const { apiKey } = args;
+  let { chainId, sourceRoot, remappings: remappingsFile } = args;
+
+  if (!chainId) chainId = "1";
+  if (!sourceRoot) sourceRoot = ".";
+  if (!contracts?.length) {
+    console.error("At least one contract address is required.");
+    showHelp();
+    Deno.exit(1);
+  }
+
+  for (const addr of contracts) {
+    if (!addr || !addr.match(/^0x[0-9a-fA-F]{40}$/)) {
+      throw new Error("Invalid address: " + addr);
+    }
+  }
+
+  if (!remappingsFile?.trim()) {
+    remappingsFile = join(sourceRoot, "remappings.txt");
+  }
+
+  const remappings = await loadRemappings(remappingsFile!);
+
+  let hasIssues = false;
+
+  for (const address of contracts) {
+    const sourceResult = await fetchContractSource(
+      address,
+      chainId as any,
+      apiKey,
+    );
+    const contractSources = parseSourceCode(sourceResult);
+
+    if (contractSources.size === 0) {
+      console.warn(yellow(`No source files were received for ${address}.`));
+      continue;
     }
 
-    for (const addr of contracts) {
-      if (!addr || !addr.match(/^0x[0-9a-fA-F]{40}$/)) {
-        throw new Error("Invalid address: " + addr);
-      }
+    const results = await diffWithLocalPath(
+      contractSources,
+      sourceRoot,
+      remappings,
+    );
+    printResults(results);
+    console.log();
+
+    if (results.some((item) => item.status !== "match")) {
+      hasIssues = true;
     }
-    if (!remappingsFile?.trim()) {
-      remappingsFile = join(sourceRoot, "remappings.txt");
-    }
-    const remappings = await loadRemappings(remappingsFile!);
+  }
 
-    // Handle each contract
-    for (const address of contracts) {
-      const sourceResult = await fetchContractSource(
-        address,
-        chainId as any,
-        apiKey,
-      );
-
-      const contractSources = parseSourceCode(sourceResult);
-      if (contractSources.size === 0) {
-        console.warn(yellow(`No source files were received for ${address}.`));
-        continue;
-      }
-
-      const results = await compareSources(
-        contractSources,
-        sourceRoot,
-        remappings,
-      );
-      displayResults(results);
-      console.log();
-
-      if (results.some((item) => item.status !== "match")) {
-        hasIssues = true;
-      }
-    }
-
-    if (!hasIssues) {
-      console.error(
-        green(
-          `All the fetched contracts match the source code within the ${sourceRoot} directory`,
-        ),
-      );
-    } else {
-      console.error(red("One or more contracts could not be verified"));
-
-      Deno.exit(1);
-    }
-  } catch (error: any) {
-    console.error(red(`Error: ${error.message}`));
+  if (!hasIssues) {
+    console.error(
+      green(
+        `All the fetched contracts match the source code within the ${sourceRoot} directory`,
+      ),
+    );
+  } else {
+    console.error(red("One or more contracts could not be verified"));
     Deno.exit(1);
   }
 }
 
+async function diffContracts(args: CliArguments) {
+  console.log(yellow("The diff command is not implemented yet."));
+}
+
+// Global
+
 function showHelp() {
-  console.log(`Usage: mirror [options] [contracts...]
+  console.log(`Usage: mirror <command> [options] [contracts...]
 
-  List:
-    contracts  The list of addresses to verify
+Commands:
+  verify   Fetch and compare contract source code from Etherscan
+  diff     (Not implemented) Show differences between contracts
 
-  Options:
-    -r, --source-root  Root path of the source code  (default: current directory)
-    -i, --chain-id     Chain ID of the network  (default: 1)
-    -k, --api-key      API Key (Etherscan)
-    -m, --remappings   Use a specific remappings.txt file
-        --version      Show version number
-        --help         Show help`);
+Options:
+  -r, --source-root  Root path of the source code (default: current directory)
+  -i, --chain-id     Chain ID of the network (default: 1)
+  -k, --api-key      Etherscan API key
+  -m, --remappings   Path to remappings.txt file (default: <source-root>/remappings.txt)
+
+Examples:
+  mirror verify --source-root ./src --chain-id 1 --api-key YOUR_KEY 0x... 0x...
+  mirror verify 0x... --source-root ./src
+
+Global flags:
+  --version    Show version
+  --help       Show this help`);
 }
 
 function showVersion() {
@@ -137,5 +142,7 @@ function showVersion() {
 }
 
 if (import.meta.main) {
-  await main();
+  await main().catch((err) => {
+    console.error(red("Error:"), err.message);
+  });
 }
