@@ -10,7 +10,7 @@ type DiffResult =
       path: string;
     }
   | {
-      status: "mismatch";
+      status: "differ";
       path: string;
       diff: string;
     }
@@ -52,7 +52,7 @@ export async function diffWithLocalPath(
         result.push({ status: "match", path: etherscanPath });
       } else {
         result.push({
-          status: "mismatch",
+          status: "differ",
           path: etherscanPath,
           diff: diff(normalizedLocal, normalizedEtherscan, {
             colors: true,
@@ -118,7 +118,7 @@ export function diffEtherscanSources(
       result.push({ status: "match", path: filePathA });
     } else {
       result.push({
-        status: "mismatch",
+        status: "differ",
         path: filePathA,
         diff: diff(normalizedA, normalizedB, {
           colors: true,
@@ -141,27 +141,27 @@ export function diffEtherscanSources(
 }
 
 export function printDiffResults(results: Array<DiffResult>) {
-  let matches = 0;
-  let mismatches = 0;
-  let notFoundCount = 0;
+  let matchingFiles = 0;
+  let differingFiles = 0;
+  let missingFiles = 0;
   let errorCount = 0;
 
   for (const item of results) {
     if (item.status === "match") {
-      console.log(`${green("[MATCH]")} ${item.path}`);
-      matches++;
-    } else if (item.status === "mismatch") {
-      console.log(`${red("[MISMATCH]")}  ${item.path}`);
+      console.log(`${green("[MATCH]")}     ${item.path}`);
+      matchingFiles++;
+    } else if (item.status === "differ") {
+      console.log(`${red("[DIFFERS]")}   ${item.path}`);
       console.log(item.diff + "\n");
-      mismatches++;
+      differingFiles++;
     } else if (item.status === "not-found") {
       console.log(`${red("[NOT FOUND]")} ${item.path}`);
       if (item.expectedPath) {
         console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
       }
-      notFoundCount++;
+      missingFiles++;
     } else if (item.status === "error") {
-      console.log(`${red("[ERROR]")} ${item.path}`);
+      console.log(`${red("[ERROR]")}     ${item.path}`);
       if (item.expectedPath) {
         console.log(gray(`  > Expected at: ${item.expectedPath}\n`));
       }
@@ -170,16 +170,27 @@ export function printDiffResults(results: Array<DiffResult>) {
   }
 
   console.log();
-  if (matches) {
-    console.log(green(`${matches} file(s) matched`));
+  if (matchingFiles > 1) {
+    console.log(green(`${matchingFiles} files match`));
+  } else if (matchingFiles === 1) {
+    console.log(green("1 file matches"));
   }
-  if (mismatches) {
-    console.log(red(`${mismatches} file(s) had mismatches`));
+
+  if (differingFiles > 1) {
+    console.log(red(`${differingFiles} files differ`));
+  } else if (differingFiles === 1) {
+    console.log(red("1 file differs"));
   }
-  if (notFoundCount) {
-    console.log(red(`${notFoundCount} file(s) could not be found`));
+
+  if (missingFiles > 1) {
+    console.log(red(`${missingFiles} files not found`));
+  } else if (missingFiles === 1) {
+    console.log(red("1 file not found"));
   }
-  if (errorCount) {
-    console.log(red(`${errorCount} file(s) could not be read`));
+
+  if (errorCount > 1) {
+    console.log(red(`${errorCount} files cannot be read`));
+  } else if (errorCount === 1) {
+    console.log(red("1 file cannot be read"));
   }
 }

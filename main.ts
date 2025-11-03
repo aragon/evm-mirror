@@ -115,9 +115,7 @@ async function verifyContracts(args: CliArguments) {
 
 async function diffContracts(args: CliArguments) {
   if (args._.length !== 3) {
-    console.error("Two contract addresses are required to perform a diff.");
-    showHelp();
-    Deno.exit(1);
+    throw new Error("Two contract addresses are required to perform a diff");
   }
 
   const [addressA, addressB] = args._.slice(1);
@@ -202,6 +200,6 @@ function showVersion() {
 
 if (import.meta.main) {
   await main().catch((err) => {
-    console.error(red("Error:"), err.message);
+    console.error(yellow("Error:"), err.message);
   });
 }
