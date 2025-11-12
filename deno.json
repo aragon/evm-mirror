@@ -2,7 +2,7 @@
   "tasks": {
     "build:linux": "deno compile --allow-net --allow-read --target x86_64-unknown-linux-gnu -o mirror main.ts",
     "build:macos": "deno compile --allow-net --allow-read --target aarch64-apple-darwin -o mirror main.ts",
-    "build:macos:x86": "deno --allow-net --allow-read compile --target x86_64-apple-darwin -o mirror main.ts",
+    "build:macos:x86": "deno compile --allow-net --allow-read --target x86_64-apple-darwin -o mirror main.ts",
     "build:win": "deno compile --allow-net --allow-read --target x86_64-pc-windows-msvc -o mirror.exe main.ts"
   },
   "imports": {
