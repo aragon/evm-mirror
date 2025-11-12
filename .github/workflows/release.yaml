@@ -1,0 +1,80 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., v1.0.0)"
+        required: true
+        type: string
+      release_notes:
+        description: "Release notes (leave empty to generate automatically)"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  build-release:
+    name: Build Release Binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Build Linux binary
+        run: deno task build:linux && mv mirror mirror-linux
+
+      - name: Build macOS binary (ARM64)
+        run: deno task build:macos && mv mirror mirror-macos-aarch64
+
+      - name: Build macOS binary (x86_64)
+        run: deno task build:macos:x86 && mv mirror mirror-macos-x86_64
+
+      - name: Build Windows binary
+        run: deno task build:win
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: |
+            mirror-linux
+            mirror-macos-aarch64
+            mirror-macos-x86_64
+            mirror.exe
+          retention-days: 7
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Create the release and upload assets
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: artifacts
+
+      - name: List downloaded files
+        run: ls -R artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          body: ${{ github.event.inputs.release_notes }}
+          generate_release_notes: ${{ github.event.inputs.release_notes == '' }}
+          files: |
+            artifacts/mirror-linux
+            artifacts/mirror-macos-aarch64
+            artifacts/mirror-macos-x86_64
+            artifacts/mirror.exe
