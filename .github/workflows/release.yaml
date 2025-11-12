@@ -16,6 +16,8 @@ on:
 jobs:
   build-release:
     name: Build Release Binaries
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
