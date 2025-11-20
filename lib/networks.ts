@@ -5,6 +5,7 @@ export function getNetworkExplorer(chainId: SupportedChainId): Network {
     case "1":
     case "137":
     case "42161":
+    case "43114":
     case "8453":
     case "10":
     case "11155111":
