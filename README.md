@@ -85,6 +85,8 @@ For cases where the local folder uses different paths than the ones verified on 
 
 If the project folder already has a `remappings.txt` file, it will be used automatically.
 
+NOTE: Mirror assumes that you are verifying a project from the same repo that was used to deploy it. Verifying a contract against a local source that lives in a different repo (different path structure), chances are that many explicit remappings will be needed. 
+
 ### Using with Deno
 
 If you have Deno installed, you can run EVM Mirror directly from the source code.
