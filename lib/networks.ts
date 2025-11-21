@@ -5,7 +5,6 @@ export function getNetworkExplorer(chainId: SupportedChainId): Network {
     case "1":
     case "137":
     case "42161":
-    case "43114":
     case "8453":
     case "10":
     case "11155111":
@@ -18,6 +17,7 @@ export function getNetworkExplorer(chainId: SupportedChainId): Network {
       };
 
     case "21000000":
+    case "43114":
     case "88888":
       return {
         urlPrefix: `https://api.routescan.io/v2/network/mainnet/evm/${chainId}/etherscan/api?module=contract&action=getsourcecode`,
