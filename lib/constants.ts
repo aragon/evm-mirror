@@ -2,18 +2,22 @@ export const MIRROR_VERSION = "0.12.0";
 
 export const SUPPORTED_CHAIN_IDS = [
   // Etherscan
-  "1",
-  "137",
-  "42161",
-  "8453",
-  "10",
-  "11155111",
-  "17000",
-  "300",
-  "324",
+  "1", // Mainnet
+  "137", // Polygon
+  "42161", // Arbitrum
+  "8453", // Base
+  "10", // Optimism
+  "324", // ZkSync
+  // Etherscan (testnets)
+  "11155111", // Sepolia
+  "17000", // Holesky
+  "300", // ZkSync Sepolia
 
   // Routescan
-  "21000000",
-  "43114",
-  "88888",
+  "43114", // Avalanche
+  "21000000", // Corn
+  "88888", // Chiliz
+
+  // BlockScout
+  "747474", // Katana
 ] as const;

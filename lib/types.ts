@@ -10,6 +10,8 @@ export type ContractSources = {
 export type Remappings = Record<string, string>;
 
 export type Network = {
+  type: "etherscan" | "blockscout";
   urlPrefix: string;
-  requiresApiKey: boolean;
+  requiresApiKey?: boolean;
+  chainId: SupportedChainId;
 };

@@ -1,7 +1,9 @@
 import { green, red, yellow } from "jsr:@std/fmt/colors";
 import { join } from "jsr:@std/path";
 import { CliArguments, getArguments } from "./lib/cli.ts";
-import { fetchVerifiedSources } from "./lib/etherscan.ts";
+import { getNetworkData } from "./lib/networks.ts";
+import { fetchSources as fetchEtherscanSources } from "./lib/etherscan.ts";
+import { fetchSources as fetchBlockscoutSources } from "./lib/blockscout.ts";
 import {
   diffEtherscanSources,
   diffWithLocalPath,
@@ -62,6 +64,11 @@ async function verifyContracts(args: CliArguments) {
     Deno.exit(1);
   }
 
+  const networkData = getNetworkData(chainId as any);
+  if (!networkData) {
+    throw new Error("Unsupported chain ID: " + chainId);
+  }
+
   for (const addr of contracts) {
     if (!addr || !addr.match(/^0x[0-9a-fA-F]{40}$/)) {
       throw new Error("Invalid address: " + addr);
@@ -75,13 +82,13 @@ async function verifyContracts(args: CliArguments) {
   const remappings = await loadRemappings(remappingsFile!);
 
   let hasIssues = false;
+  const fetchSources =
+    networkData.type === "etherscan"
+      ? fetchEtherscanSources
+      : fetchBlockscoutSources;
 
   for (const address of contracts) {
-    const contractInfo = await fetchVerifiedSources(
-      address,
-      chainId as any,
-      apiKey,
-    );
+    const contractInfo = await fetchSources(address, networkData, apiKey);
 
     if (Object.keys(contractInfo.sources).length === 0) {
       console.warn(yellow(`No source files were received for ${address}.`));
@@ -129,18 +136,19 @@ async function diffContracts(args: CliArguments) {
     throw new Error("Invalid address: " + addressB);
   }
 
-  let hasIssues = false;
+  const networkData = getNetworkData(chainId as any);
+  if (!networkData) {
+    throw new Error("Unsupported chain ID: " + chainId);
+  }
 
-  const contractA = await fetchVerifiedSources(
-    addressA,
-    chainId as any,
-    apiKey,
-  );
-  const contractB = await fetchVerifiedSources(
-    addressB,
-    chainId as any,
-    apiKey,
-  );
+  let hasIssues = false;
+  const fetchSources =
+    networkData.type === "etherscan"
+      ? fetchEtherscanSources
+      : fetchBlockscoutSources;
+
+  const contractA = await fetchSources(addressA, networkData, apiKey);
+  const contractB = await fetchSources(addressB, networkData, apiKey);
 
   if (Object.keys(contractA.sources).length === 0) {
     throw new Error(`No source files were received for ${contractA.address}.`);
