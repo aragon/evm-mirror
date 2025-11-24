@@ -1,6 +1,5 @@
 import { red, bold, gray } from "jsr:@std/fmt/colors";
-import { getNetworkExplorer } from "./networks.ts";
-import { SupportedChainId, ContractSources } from "./types.ts";
+import { ContractSources, Network } from "./types.ts";
 
 /**
  * Fetches the verified source code of a contract from the Etherscan API.
@@ -9,21 +8,20 @@ import { SupportedChainId, ContractSources } from "./types.ts";
  * @param apiKey The Etherscan API key.
  * @returns The full details of the contract, if available.
  */
-export async function fetchVerifiedSources(
+export async function fetchSources(
   contractAddress: string,
-  chainId: SupportedChainId,
+  networkData: Network,
   apiKey: string = "",
 ): Promise<ContractSources> {
-  const networkExplorer = getNetworkExplorer(chainId);
-  if (!networkExplorer) {
-    throw new Error("Unsupported chain ID: " + chainId);
-  } else if (networkExplorer.requiresApiKey && !apiKey) {
-    throw new Error("An API key is required for chain ID " + chainId);
+  if (networkData.requiresApiKey && !apiKey) {
+    throw new Error(
+      "An API key is required for chain ID " + networkData.chainId,
+    );
   }
 
   console.log(gray(`Fetching sources for ${bold(contractAddress)}...`));
 
-  const url = `${networkExplorer.urlPrefix}&address=${contractAddress}&apikey=${apiKey}`;
+  const url = `${networkData.urlPrefix}&address=${contractAddress}&apikey=${apiKey}`;
 
   const response = await fetch(url);
   if (!response.ok) {
