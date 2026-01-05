@@ -4,7 +4,17 @@ export type CliArguments = ReturnType<typeof getArguments>;
 
 export function getArguments() {
   return parseArgs(Deno.args, {
-    string: ["_", "chain-id", "source-root", "api-key", "remappings"],
+    string: [
+      "_",
+      "chain-id",
+      "i",
+      "source-root",
+      "r",
+      "api-key",
+      "k",
+      "remappings",
+      "m",
+    ],
     boolean: ["h", "v"],
     alias: {
       r: "sourceRoot",

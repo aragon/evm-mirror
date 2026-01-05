@@ -7,6 +7,7 @@ export const SUPPORTED_CHAIN_IDS = [
   "42161", // Arbitrum
   "8453", // Base
   "10", // Optimism
+  "167000", // Taiko
   "324", // ZkSync
   // Etherscan (testnets)
   "11155111", // Sepolia
