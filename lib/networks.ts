@@ -10,6 +10,7 @@ export function getNetworkData(chainId: SupportedChainId): Network {
     case "10":
     case "11155111":
     case "17000":
+    case "167000":
     case "300":
     case "324":
       return {
