@@ -1,5 +1,5 @@
 import { red, bold, gray } from "jsr:@std/fmt/colors";
-import { ContractSources, Network } from "./types.ts";
+import { ContractSourcesWithMeta, Network } from "./types.ts";
 
 /**
  * Fetches the verified source code of a contract from the Etherscan API.
@@ -12,7 +12,7 @@ export async function fetchSources(
   contractAddress: string,
   networkData: Network,
   apiKey: string = "",
-): Promise<ContractSources> {
+): Promise<ContractSourcesWithMeta> {
   if (networkData.requiresApiKey && !apiKey) {
     throw new Error(
       "An API key is required for chain ID " + networkData.chainId,
@@ -44,7 +44,7 @@ export async function fetchSources(
 function parseVerifiedSources(
   contractAddress: string,
   sourceResult: EtherscanVerifiedContract,
-): ContractSources {
+): ContractSourcesWithMeta {
   let sourceCode = sourceResult.SourceCode;
   if (
     !sourceCode ||
@@ -53,9 +53,17 @@ function parseVerifiedSources(
     throw new Error("The contract is not verified or does not exist");
   }
 
-  const result: ContractSources = {
+  const result: ContractSourcesWithMeta = {
     address: contractAddress,
     sources: {},
+    meta: {
+      compilerVersion: sourceResult.CompilerVersion,
+      optimizationUsed: sourceResult.OptimizationUsed === "1",
+      runs: parseInt(sourceResult.Runs, 10) || 200,
+      evmVersion: sourceResult.EVMVersion,
+      contractFileName: sourceResult.ContractFileName,
+      contractName: sourceResult.ContractName,
+    },
   };
 
   if (sourceCode.startsWith("{{") && sourceCode.endsWith("}}")) {

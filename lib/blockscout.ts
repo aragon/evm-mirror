@@ -1,5 +1,5 @@
 import { bold, gray } from "jsr:@std/fmt/colors";
-import { ContractSources, Network } from "./types.ts";
+import { ContractSourcesWithMeta, Network } from "./types.ts";
 
 /**
  * Fetches the verified source code of a contract from the BlockScout API.
@@ -10,7 +10,7 @@ import { ContractSources, Network } from "./types.ts";
 export async function fetchSources(
   contractAddress: string,
   networkData: Network,
-): Promise<ContractSources> {
+): Promise<ContractSourcesWithMeta> {
   console.log(gray(`Fetching sources for ${bold(contractAddress)}...`));
 
   const endpoint = `${networkData.urlPrefix}/v2/smart-contracts/${contractAddress}`;
@@ -33,7 +33,7 @@ export async function fetchSources(
 function parseVerifiedSources(
   contractAddress: string,
   apiResult: BlockScoutContractResponse,
-): ContractSources {
+): ContractSourcesWithMeta {
   if (!apiResult.source_code || !apiResult.abi?.length) {
     throw new Error("The contract is not verified or does not exist");
   }
@@ -46,10 +46,18 @@ function parseVerifiedSources(
     );
   }
 
-  const result: ContractSources = {
+  const result: ContractSourcesWithMeta = {
     address: contractAddress,
     sources: {
       [apiResult.file_path]: apiResult.source_code,
+    },
+    meta: {
+      compilerVersion: apiResult.compiler_version,
+      optimizationUsed: apiResult.optimization_enabled,
+      runs: apiResult.optimization_runs,
+      evmVersion: apiResult.evm_version,
+      contractFileName: apiResult.file_path,
+      contractName: apiResult.name,
     },
   };
 
