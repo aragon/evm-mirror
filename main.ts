@@ -179,8 +179,8 @@ async function diffContractsCmd(args: CliArguments) {
 }
 
 async function cloneContractCmd(args: CliArguments) {
-  const address = args._[1];
-  let { chainId, apiKey, output } = args;
+  let address = args._[1];
+  let { chainId, apiKey, output, followProxy } = args;
 
   if (!chainId) chainId = "1";
   if (!address || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
@@ -199,7 +199,18 @@ async function cloneContractCmd(args: CliArguments) {
       ? fetchEtherscanSources
       : fetchBlockscoutSources;
 
-  const contractInfo = await fetchSources(address, networkData, apiKey);
+  let contractInfo = await fetchSources(address, networkData, apiKey);
+
+  // Follow proxy to implementation if requested
+  if (followProxy && contractInfo.proxy?.implementation) {
+    console.log(
+      yellow(
+        `Following proxy to implementation: ${contractInfo.proxy.implementation}\n`,
+      ),
+    );
+    address = contractInfo.proxy.implementation;
+    contractInfo = await fetchSources(address, networkData, apiKey);
+  }
 
   if (Object.keys(contractInfo.sources).length === 0) {
     throw new Error(`No source files were received for ${address}.`);
@@ -233,6 +244,7 @@ Verify options:
 
 Clone options:
   -o, --output         Destination folder (default: ./<ContractName>)
+  -f, --follow-proxy   Clone the implementation contract instead of the proxy
 
 Examples:
   mirror verify <address-1> <address-...>

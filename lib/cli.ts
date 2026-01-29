@@ -17,7 +17,7 @@ export function getArguments() {
       "output",
       "o",
     ],
-    boolean: ["h", "v"],
+    boolean: ["h", "v", "follow-proxy", "f"],
     alias: {
       r: "sourceRoot",
       i: "chainId",
@@ -26,9 +26,11 @@ export function getArguments() {
       v: "version",
       h: "help",
       o: "output",
+      f: "followProxy",
       "source-root": "sourceRoot",
       "chain-id": "chainId",
       "api-key": "apiKey",
+      "follow-proxy": "followProxy",
     },
   });
 }

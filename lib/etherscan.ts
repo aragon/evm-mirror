@@ -66,6 +66,11 @@ function parseVerifiedSources(
     },
   };
 
+  // Include proxy info if available
+  if (sourceResult.Proxy === "1" && sourceResult.Implementation) {
+    result.proxy = { implementation: sourceResult.Implementation };
+  }
+
   if (sourceCode.startsWith("{{") && sourceCode.endsWith("}}")) {
     // Standard JSON-Input format
     sourceCode = sourceCode.slice(1, -1); // Remove the outer braces
