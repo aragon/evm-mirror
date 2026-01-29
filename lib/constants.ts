@@ -1,5 +1,7 @@
 export const MIRROR_VERSION = "0.13.0";
 
+export const DEFAULT_SOLC_VERSION = "0.8.28";
+
 export const SUPPORTED_CHAIN_IDS = [
   // Etherscan
   "1", // Mainnet

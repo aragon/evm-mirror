@@ -10,6 +10,7 @@ import {
   printDiffResults,
 } from "./lib/source.ts";
 import { loadRemappings } from "./lib/foundry.ts";
+import { cloneContract } from "./lib/clone.ts";
 import { MIRROR_VERSION } from "./lib/constants.ts";
 
 /**
@@ -36,14 +37,17 @@ async function main() {
   const [command] = args._;
   switch (command) {
     case "verify":
-      await verifyContracts(args);
+      await verifyContractsCmd(args);
       break;
     case "diff":
-      await diffContracts(args);
+      await diffContractsCmd(args);
+      break;
+    case "clone":
+      await cloneContractCmd(args);
       break;
     default:
       if (command) {
-        console.error("Unrecognized command: use 'verify' or 'diff'");
+        console.error("Unrecognized command: use 'verify', 'diff', or 'clone'");
       }
       showHelp();
       Deno.exit(1);
@@ -52,7 +56,7 @@ async function main() {
 
 // Handlers
 
-async function verifyContracts(args: CliArguments) {
+async function verifyContractsCmd(args: CliArguments) {
   const contracts = args._.slice(1);
   let { chainId, apiKey, sourceRoot, remappings: remappingsFile } = args;
 
@@ -120,7 +124,7 @@ async function verifyContracts(args: CliArguments) {
   }
 }
 
-async function diffContracts(args: CliArguments) {
+async function diffContractsCmd(args: CliArguments) {
   if (args._.length !== 3) {
     throw new Error("Two contract addresses are required to perform a diff");
   }
@@ -174,6 +178,41 @@ async function diffContracts(args: CliArguments) {
   }
 }
 
+async function cloneContractCmd(args: CliArguments) {
+  const address = args._[1];
+  let { chainId, apiKey, output } = args;
+
+  if (!chainId) chainId = "1";
+  if (!address || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
+    console.error("A valid contract address is required.");
+    showHelp();
+    Deno.exit(1);
+  }
+
+  const networkData = getNetworkData(chainId as any);
+  if (!networkData) {
+    throw new Error("Unsupported chain ID: " + chainId);
+  }
+
+  const fetchSources =
+    networkData.type === "etherscan"
+      ? fetchEtherscanSources
+      : fetchBlockscoutSources;
+
+  const contractInfo = await fetchSources(address, networkData, apiKey);
+
+  if (Object.keys(contractInfo.sources).length === 0) {
+    throw new Error(`No source files were received for ${address}.`);
+  }
+
+  // Default output directory to contract name
+  if (!output) {
+    output = `./${contractInfo.meta.contractName}`;
+  }
+
+  await cloneContract(contractInfo, output, networkData);
+}
+
 // Global
 
 function showHelp() {
@@ -182,6 +221,7 @@ function showHelp() {
 Commands:
   verify     Fetch and compare contract source code from Etherscan
   diff       Show the diff between two on-chain contracts
+  clone      Download verified contract source code and create a Foundry project
 
 Options:
   -i, --chain-id       Chain ID of the network (default: 1)
@@ -191,11 +231,16 @@ Verify options:
   -r, --source-root    Root path of the source code (default: \$PWD)
   -m, --remappings     Path to remappings.txt file (default: <source-root>/remappings.txt)
 
+Clone options:
+  -o, --output         Destination folder (default: ./<ContractName>)
+
 Examples:
   mirror verify <address-1> <address-...>
   mirror verify <address-1> <address-...> --source-root ./src --chain-id 1 --api-key <your-key>
   mirror diff <address-A> <address-B>
   mirror diff <address-A> <address-B> --chain-id 10 --api-key <your-key>
+  mirror clone <address>
+  mirror clone <address> --output ./my-contract --chain-id 10 --api-key <your-key>
 
 Global flags:
   --version    Show version

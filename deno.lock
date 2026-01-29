@@ -4,8 +4,10 @@
     "jsr:@libs/diff@*": "3.0.1",
     "jsr:@std/cli@*": "1.0.22",
     "jsr:@std/fmt@*": "1.0.8",
+    "jsr:@std/fs@*": "1.0.5",
     "jsr:@std/internal@^1.0.10": "1.0.10",
-    "jsr:@std/path@*": "1.1.2"
+    "jsr:@std/path@*": "1.1.2",
+    "jsr:@std/path@^1.0.7": "1.1.2"
   },
   "jsr": {
     "@libs/diff@3.0.1": {
@@ -16,6 +18,12 @@
     },
     "@std/fmt@1.0.8": {
       "integrity": "71e1fc498787e4434d213647a6e43e794af4fd393ef8f52062246e06f7e372b7"
+    },
+    "@std/fs@1.0.5": {
+      "integrity": "41806ad6823d0b5f275f9849a2640d87e4ef67c51ee1b8fb02426f55e02fd44e",
+      "dependencies": [
+        "jsr:@std/path@^1.0.7"
+      ]
     },
     "@std/internal@1.0.10": {
       "integrity": "e3be62ce42cab0e177c27698e5d9800122f67b766a0bea6ca4867886cbde8cf7"

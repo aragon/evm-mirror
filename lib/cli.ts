@@ -14,6 +14,8 @@ export function getArguments() {
       "k",
       "remappings",
       "m",
+      "output",
+      "o",
     ],
     boolean: ["h", "v"],
     alias: {
@@ -23,6 +25,7 @@ export function getArguments() {
       m: "remappings",
       v: "version",
       h: "help",
+      o: "output",
       "source-root": "sourceRoot",
       "chain-id": "chainId",
       "api-key": "apiKey",
