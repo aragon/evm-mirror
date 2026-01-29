@@ -4,6 +4,7 @@
 
 - Verifying that the deployed code matches an exact Git commit or an audit.
 - Comparing the code of two on-chain contracts.
+- Cloning verified contracts into local Foundry projects.
 
 Inspired by the great [DiffyScan](https://github.com/lidofinance/diffyscan) from [Lido](https://lido.fi/ethereum), EVM Mirror is tailored for **Foundry** projects, offering a streamlined, dependency-free experience.
 
@@ -72,6 +73,36 @@ mirror diff \
     0x1234... 0x2345...
 ```
 
+#### Cloning a verified contract
+
+Running `mirror clone` downloads the verified source code from the block explorer and creates a local Foundry project that you can work with.
+
+```sh
+mirror clone \
+    --api-key <ETHERSCAN_API_KEY> \
+    --output ./my-contract \
+    0x1234...
+```
+
+This will:
+- Download all source files preserving their directory structure
+- Generate a `foundry.toml` with the correct compiler settings
+- Generate `remappings.txt` if needed (for `@openzeppelin/` style imports)
+
+Paths like `@openzeppelin/...` or `node_modules/@openzeppelin/...` are automatically transformed to `lib/@openzeppelin/...` for Foundry compatibility.
+
+### Options
+
+| Flag | Alias | Description | Default |
+| --- | --- | --- | --- |
+| `--api-key` | `-k` | Your Etherscan API key. Required for most chains. | |
+| `--chain-id` | `-i` | The chain ID of the target network. | `1` (Ethereum Mainnet) |
+| `--source-root` | `-r` | The root path of the source code folder (verify only). | `.` (current directory) |
+| `--remappings` | `-m` | Path to the `remappings.txt` file (verify only). | `remappings.txt` in the source root |
+| `--output` | `-o` | Destination folder for cloned contract (clone only). | `./<ContractName>` |
+| `--version` | | Show the version number. | |
+| `--help` | | Show the help message. | |
+
 ### Using with Deno
 
 If you have Deno installed, you can run EVM Mirror directly from the source code.
@@ -83,17 +114,6 @@ deno run --allow-net --allow-read main.ts verify \
   --source-root ../my-foundry-project \
   0x1234... 0x2345...
 ```
-
-### Options
-
-| Flag | Alias | Description | Default |
-| --- | --- | --- | --- |
-| `--api-key` | `-k` | Your Etherscan API key. Required for most chains. | `     ` |
-| `--chain-id` | `-i` | The chain ID of the target network. | `1` (Ethereum Mainnet) |
-| `--source-root` | `-r` | The root path of the source code folder. | `.` (current directory) |
-| `--remappings` | `-m` | Path to the `remappings.txt` file. | `remappings.txt` in the source root |
-| `--version` | | Show the version number. | |
-| `--help` | | Show the help message. | |
 
 ## Building from Source
 
