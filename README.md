@@ -94,17 +94,45 @@ This will:
 
 Paths like `@openzeppelin/...` or `node_modules/@openzeppelin/...` are automatically transformed to `lib/@openzeppelin/...` for Foundry compatibility.
 
+#### Working with proxy contracts
+
+Use `--follow-proxy` to resolve a proxy contract to its implementation. This works with all commands:
+
+```sh
+# Clone the implementation behind a proxy
+mirror clone --follow-proxy 0x1234...
+
+# Verify the implementation source code
+mirror verify --follow-proxy 0x1234...
+
+# Diff two proxy implementations
+mirror diff --follow-proxy 0x1234... 0x5678...
+```
+
 ### Options
+
+**Global options** (apply to all commands):
 
 | Flag | Alias | Description | Default |
 | --- | --- | --- | --- |
 | `--api-key` | `-k` | Your Etherscan API key. Required for most chains. | |
 | `--chain-id` | `-i` | The chain ID of the target network. | `1` (Ethereum Mainnet) |
-| `--source-root` | `-r` | The root path of the source code folder (verify only). | `.` (current directory) |
-| `--remappings` | `-m` | Path to the `remappings.txt` file (verify only). | `remappings.txt` in the source root |
-| `--output` | `-o` | Destination folder for cloned contract (clone only). | `./<ContractName>` |
+| `--follow-proxy` | `-f` | Resolve proxy contracts to their implementation. | |
 | `--version` | | Show the version number. | |
 | `--help` | | Show the help message. | |
+
+**Verify options**:
+
+| Flag | Alias | Description | Default |
+| --- | --- | --- | --- |
+| `--source-root` | `-r` | The root path of the source code folder. | `.` (current directory) |
+| `--remappings` | `-m` | Path to the `remappings.txt` file. | `remappings.txt` in the source root |
+
+**Clone options**:
+
+| Flag | Alias | Description | Default |
+| --- | --- | --- | --- |
+| `--output` | `-o` | Destination folder for cloned contract. | `./<ContractName>` |
 
 ### Using with Deno
 
