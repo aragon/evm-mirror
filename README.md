@@ -82,6 +82,9 @@ mirror clone \
     --api-key <ETHERSCAN_API_KEY> \
     --output ./my-contract \
     0x1234...
+
+cd ./my-contract
+forge build
 ```
 
 This will:
