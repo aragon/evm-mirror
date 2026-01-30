@@ -43,7 +43,7 @@ Comparing 50 source files for each address, on multiple networks and doing it by
 
 #### Verify a contract against a local project
 
-Running `mirror verify` shows the diff between the given address(es) and the source files on a local directory. By default it targets Ethereum Mainnet and the root path is the current directory. In certain networks, the API is not required.
+Running `mirror verify` shows the diff between the given address(es) and the source files on a local directory. By default it targets Ethereum Mainnet and the root path is the current directory. In certain networks, the API key is not required.
 
 ```sh
 mirror verify --api-key <ETHERSCAN_API_KEY> 0x1234... 0x2345...
@@ -64,7 +64,7 @@ mirror verify \
 
 #### Diff'ing two on-chain contracts
 
-Running `mirror diff` shows the diff between two on-chain contracts verified on Etherscan. By default it targets Ethereum Mainnet and in certain networks, the API is not required.
+Running `mirror diff` shows the diff between two on-chain contracts verified on Etherscan. By default it targets Ethereum Mainnet and in certain networks, the API key is not required.
 
 ```sh
 mirror diff \
@@ -94,17 +94,60 @@ This will:
 
 Paths like `@openzeppelin/...` or `node_modules/@openzeppelin/...` are automatically transformed to `lib/@openzeppelin/...` for Foundry compatibility.
 
+#### Working with proxy contracts
+
+Use `--follow-proxy` to resolve a proxy contract to its implementation. This works with all commands:
+
+```sh
+# Clone the implementation behind a proxy
+mirror clone --follow-proxy 0x1234...
+
+# Verify the implementation source code
+mirror verify --follow-proxy 0x1234...
+
+# Diff two proxy implementations
+mirror diff --follow-proxy 0x1234... 0x5678...
+```
+
 ### Options
+
+**Global options** (apply to all commands):
 
 | Flag | Alias | Description | Default |
 | --- | --- | --- | --- |
 | `--api-key` | `-k` | Your Etherscan API key. Required for most chains. | |
 | `--chain-id` | `-i` | The chain ID of the target network. | `1` (Ethereum Mainnet) |
-| `--source-root` | `-r` | The root path of the source code folder (verify only). | `.` (current directory) |
-| `--remappings` | `-m` | Path to the `remappings.txt` file (verify only). | `remappings.txt` in the source root |
-| `--output` | `-o` | Destination folder for cloned contract (clone only). | `./<ContractName>` |
+| `--follow-proxy` | `-f` | Resolve proxy contracts to their implementation. | |
 | `--version` | | Show the version number. | |
 | `--help` | | Show the help message. | |
+
+**Verify options**:
+
+| Flag | Alias | Description | Default |
+| --- | --- | --- | --- |
+| `--source-root` | `-r` | The root path of the source code folder. | `.` (current directory) |
+| `--remappings` | `-m` | Path to the `remappings.txt` file. | `remappings.txt` in the source root |
+
+**Clone options**:
+
+| Flag | Alias | Description | Default |
+| --- | --- | --- | --- |
+| `--output` | `-o` | Destination folder for cloned contract. | `./<ContractName>` |
+
+### Remappings
+
+For cases where the local folder uses different paths than the ones verified on Etherscan, you can pass a remappings file. It follows the format used by Foundry:
+
+```sh
+# dependency-name = relative-path
+@aragon/osx/=lib/osx/packages/contracts/src/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+```
+
+If the project folder already has a `remappings.txt` file, it will be used automatically.
+
+NOTE: Mirror assumes that you are verifying a project from the same repo that was used to deploy it. Verifying a contract against a local source that lives in a different repo (different path structure), chances are that many explicit remappings will be needed. 
 
 ### Using with Deno
 

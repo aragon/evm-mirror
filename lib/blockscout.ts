@@ -38,14 +38,6 @@ function parseVerifiedSources(
     throw new Error("The contract is not verified or does not exist");
   }
 
-  if (apiResult.implementations?.length) {
-    console.log(
-      gray(
-        `[Implementation at ${bold(apiResult.implementations[0].address)}]\n`,
-      ),
-    );
-  }
-
   const result: ContractSourcesWithMeta = {
     address: contractAddress,
     sources: {
@@ -60,6 +52,11 @@ function parseVerifiedSources(
       contractName: apiResult.name,
     },
   };
+
+  // Include proxy info if available
+  if (apiResult.implementations?.length) {
+    result.proxy = { implementation: apiResult.implementations[0].address };
+  }
 
   for (const dependency of apiResult.additional_sources) {
     result.sources[dependency.file_path] = dependency.source_code;

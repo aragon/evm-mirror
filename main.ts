@@ -1,7 +1,8 @@
-import { green, red, yellow } from "jsr:@std/fmt/colors";
+import { gray, green, red, yellow } from "jsr:@std/fmt/colors";
 import { join } from "jsr:@std/path";
 import { CliArguments, getArguments } from "./lib/cli.ts";
 import { getNetworkData } from "./lib/networks.ts";
+import { Network } from "./lib/types.ts";
 import { fetchSources as fetchEtherscanSources } from "./lib/etherscan.ts";
 import { fetchSources as fetchBlockscoutSources } from "./lib/blockscout.ts";
 import {
@@ -54,11 +55,52 @@ async function main() {
   }
 }
 
+// Helpers
+
+/**
+ * Fetches contract sources, optionally resolving proxy to implementation.
+ */
+async function fetchContractSources(
+  address: string,
+  networkData: Network,
+  apiKey: string | undefined,
+  followProxy: boolean,
+) {
+  const fetcher =
+    networkData.type === "etherscan"
+      ? fetchEtherscanSources
+      : fetchBlockscoutSources;
+
+  const contractInfo = await fetcher(address, networkData, apiKey);
+
+  if (!followProxy) {
+    return contractInfo;
+  }
+
+  if (!contractInfo.proxy?.implementation) {
+    console.log(gray(`Note: ${address} is not a proxy, nothing to follow.\n`));
+    return contractInfo;
+  }
+
+  console.log(
+    gray(
+      `Following proxy to implementation: ${contractInfo.proxy.implementation}\n`,
+    ),
+  );
+  return await fetcher(contractInfo.proxy.implementation, networkData, apiKey);
+}
+
 // Handlers
 
 async function verifyContractsCmd(args: CliArguments) {
   const contracts = args._.slice(1);
-  let { chainId, apiKey, sourceRoot, remappings: remappingsFile } = args;
+  let {
+    chainId,
+    apiKey,
+    sourceRoot,
+    remappings: remappingsFile,
+    followProxy,
+  } = args;
 
   if (!chainId) chainId = "1";
   if (!sourceRoot) sourceRoot = ".";
@@ -86,13 +128,14 @@ async function verifyContractsCmd(args: CliArguments) {
   const remappings = await loadRemappings(remappingsFile!);
 
   let hasIssues = false;
-  const fetchSources =
-    networkData.type === "etherscan"
-      ? fetchEtherscanSources
-      : fetchBlockscoutSources;
 
   for (const address of contracts) {
-    const contractInfo = await fetchSources(address, networkData, apiKey);
+    const contractInfo = await fetchContractSources(
+      address,
+      networkData,
+      apiKey,
+      !!followProxy,
+    );
 
     if (Object.keys(contractInfo.sources).length === 0) {
       console.warn(yellow(`No source files were received for ${address}.`));
@@ -130,7 +173,7 @@ async function diffContractsCmd(args: CliArguments) {
   }
 
   const [addressA, addressB] = args._.slice(1);
-  let { chainId, apiKey } = args;
+  let { chainId, apiKey, followProxy } = args;
 
   if (!chainId) chainId = "1";
 
@@ -145,14 +188,18 @@ async function diffContractsCmd(args: CliArguments) {
     throw new Error("Unsupported chain ID: " + chainId);
   }
 
-  let hasIssues = false;
-  const fetchSources =
-    networkData.type === "etherscan"
-      ? fetchEtherscanSources
-      : fetchBlockscoutSources;
-
-  const contractA = await fetchSources(addressA, networkData, apiKey);
-  const contractB = await fetchSources(addressB, networkData, apiKey);
+  const contractA = await fetchContractSources(
+    addressA,
+    networkData,
+    apiKey,
+    !!followProxy,
+  );
+  const contractB = await fetchContractSources(
+    addressB,
+    networkData,
+    apiKey,
+    !!followProxy,
+  );
 
   if (Object.keys(contractA.sources).length === 0) {
     throw new Error(`No source files were received for ${contractA.address}.`);
@@ -164,9 +211,7 @@ async function diffContractsCmd(args: CliArguments) {
   printDiffResults(results);
   console.log();
 
-  if (results.some((item) => item.status !== "match")) {
-    hasIssues = true;
-  }
+  const hasIssues = results.some((item) => item.status !== "match");
 
   if (!hasIssues) {
     console.error(
@@ -180,7 +225,7 @@ async function diffContractsCmd(args: CliArguments) {
 
 async function cloneContractCmd(args: CliArguments) {
   const address = args._[1];
-  let { chainId, apiKey, output } = args;
+  let { chainId, apiKey, output, followProxy } = args;
 
   if (!chainId) chainId = "1";
   if (!address || !address.match(/^0x[0-9a-fA-F]{40}$/)) {
@@ -194,12 +239,12 @@ async function cloneContractCmd(args: CliArguments) {
     throw new Error("Unsupported chain ID: " + chainId);
   }
 
-  const fetchSources =
-    networkData.type === "etherscan"
-      ? fetchEtherscanSources
-      : fetchBlockscoutSources;
-
-  const contractInfo = await fetchSources(address, networkData, apiKey);
+  const contractInfo = await fetchContractSources(
+    address,
+    networkData,
+    apiKey,
+    !!followProxy,
+  );
 
   if (Object.keys(contractInfo.sources).length === 0) {
     throw new Error(`No source files were received for ${address}.`);
@@ -226,6 +271,7 @@ Commands:
 Options:
   -i, --chain-id       Chain ID of the network (default: 1)
   -k, --api-key        Etherscan API key
+  -f, --follow-proxy   Resolve proxy contracts to their implementation
 
 Verify options:
   -r, --source-root    Root path of the source code (default: \$PWD)
@@ -240,7 +286,7 @@ Examples:
   mirror diff <address-A> <address-B>
   mirror diff <address-A> <address-B> --chain-id 10 --api-key <your-key>
   mirror clone <address>
-  mirror clone <address> --output ./my-contract --chain-id 10 --api-key <your-key>
+  mirror clone <address> --output ./my-contract --follow-proxy --api-key <your-key>
 
 Global flags:
   --version    Show version

@@ -18,6 +18,9 @@ export type CompilerMeta = {
 
 export type ContractSourcesWithMeta = ContractSources & {
   meta: CompilerMeta;
+  proxy?: {
+    implementation: string;
+  };
 };
 
 export type Remappings = Record<string, string>;
