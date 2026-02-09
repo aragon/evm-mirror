@@ -16,6 +16,8 @@ export function getArguments() {
       "m",
       "output",
       "o",
+      "contract",
+      "c",
     ],
     boolean: ["h", "v", "follow-proxy", "f"],
     alias: {
@@ -31,6 +33,7 @@ export function getArguments() {
       "chain-id": "chainId",
       "api-key": "apiKey",
       "follow-proxy": "followProxy",
+      c: "contract",
     },
   });
 }
