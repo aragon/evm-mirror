@@ -151,7 +151,7 @@ async function writeFileWithCheck(
  * - "node_modules/@openzeppelin/contracts/proxy/Proxy.sol" → "node_modules"
  */
 export function detectSourceRoot(contractFileName: string): string {
-  if (!contractFileName) return "src";
+  if (!contractFileName) return ".";
 
   const parts = contractFileName.split("/");
   if (parts.length > 1) {
@@ -172,7 +172,7 @@ export function detectSourceRoot(contractFileName: string): string {
       return firstSegment;
     }
   }
-  return "src";
+  return ".";
 }
 
 

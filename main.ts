@@ -13,6 +13,10 @@ import {
 import { loadRemappings } from "./lib/foundry.ts";
 import { cloneContract } from "./lib/clone.ts";
 import { MIRROR_VERSION } from "./lib/constants.ts";
+import {
+  buildAndDiffBytecodes,
+  printBytecodeDiffResults,
+} from "./lib/bytecode.ts";
 
 /**
  * @title Smart contract diff toolkit
@@ -169,18 +173,44 @@ async function verifyContractsCmd(args: CliArguments) {
 
 async function diffContractsCmd(args: CliArguments) {
   if (args._.length !== 3) {
-    throw new Error("Two contract addresses are required to perform a diff");
+    throw new Error("Two contract addresses or directory paths are required to perform a diff");
   }
 
-  const [addressA, addressB] = args._.slice(1);
+  const [argA, argB] = args._.slice(1);
+  const isAddress = (s: string) => /^0x[0-9a-fA-F]{40}$/.test(s);
+  const bothPaths = !isAddress(argA) && !isAddress(argB);
+
+  if (bothPaths) {
+    // Local bytecode comparison mode
+    const contractName = args.contract;
+    if (!contractName) {
+      throw new Error(
+        "The --contract (-c) flag is required when comparing local directories",
+      );
+    }
+
+    const results = await buildAndDiffBytecodes(argA, argB, contractName);
+    printBytecodeDiffResults(results);
+
+    const hasIssues = results.some((item) => item.status !== "match");
+    if (!hasIssues) {
+      console.error(green("Bytecodes match between the two directories"));
+    } else {
+      console.error(red("Bytecodes do not match"));
+      Deno.exit(1);
+    }
+    return;
+  }
+
+  // On-chain source comparison mode
   let { chainId, apiKey, followProxy } = args;
 
   if (!chainId) chainId = "1";
 
-  if (!addressA || !addressA.match(/^0x[0-9a-fA-F]{40}$/)) {
-    throw new Error("Invalid address: " + addressA);
-  } else if (!addressB || !addressB.match(/^0x[0-9a-fA-F]{40}$/)) {
-    throw new Error("Invalid address: " + addressB);
+  if (!isAddress(argA)) {
+    throw new Error("Invalid address: " + argA);
+  } else if (!isAddress(argB)) {
+    throw new Error("Invalid address: " + argB);
   }
 
   const networkData = getNetworkData(chainId as any);
@@ -189,13 +219,13 @@ async function diffContractsCmd(args: CliArguments) {
   }
 
   const contractA = await fetchContractSources(
-    addressA,
+    argA,
     networkData,
     apiKey,
     !!followProxy,
   );
   const contractB = await fetchContractSources(
-    addressB,
+    argB,
     networkData,
     apiKey,
     !!followProxy,
@@ -265,7 +295,7 @@ function showHelp() {
 
 Commands:
   verify     Fetch and compare contract source code from Etherscan
-  diff       Show the diff between two on-chain contracts
+  diff       Show the diff between two on-chain contracts or compare bytecodes between local Foundry projects
   clone      Download verified contract source code and create a Foundry project
 
 Options:
@@ -277,6 +307,9 @@ Verify options:
   -r, --source-root    Root path of the source code (default: \$PWD)
   -m, --remappings     Path to remappings.txt file (default: <source-root>/remappings.txt)
 
+Diff options (local bytecode mode):
+  -c, --contract       Contract name to compare (required for local directory mode)
+
 Clone options:
   -o, --output         Destination folder (default: ./<ContractName>)
 
@@ -285,6 +318,7 @@ Examples:
   mirror verify <address-1> <address-...> --source-root ./src --chain-id 1 --api-key <your-key>
   mirror diff <address-A> <address-B>
   mirror diff <address-A> <address-B> --chain-id 10 --api-key <your-key>
+  mirror diff ./dir-A ./dir-B --contract MyContract
   mirror clone <address>
   mirror clone <address> --output ./my-contract --follow-proxy --api-key <your-key>
 
