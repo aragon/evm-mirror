@@ -26,9 +26,15 @@ export type ContractSourcesWithMeta = ContractSources & {
 
 export type Remappings = Record<string, string>;
 
+export type SourceProvider = "explorer" | "sourcify" | "auto";
+
+export type ChainInfo = {
+  chainId: string;
+};
+
 export type Network = {
   type: "etherscan" | "blockscout";
   urlPrefix: string;
   requiresApiKey?: boolean;
   chainId: SupportedChainId;
-};
+} & ChainInfo;
