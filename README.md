@@ -1,6 +1,6 @@
 # EVM Mirror
 
-**EVM Mirror** is a CLI tool that checks whether the code of an EVM smart contract matches a known snapshot. It retrieves the verified sources from Etherscan (or compatible) and compares each file against a given reference.
+**EVM Mirror** is a CLI tool that checks whether the code of an EVM smart contract matches a known snapshot. It retrieves verified sources from explorer APIs or Sourcify and compares each file against a given reference.
 
 - Verifying that the deployed code matches an exact Git commit or an audit.
 - Comparing the code of two on-chain contracts.
@@ -21,10 +21,11 @@ Comparing 50 source files for each address, on multiple networks and doing it by
 - **Foundry First**: Built for Foundry projects, it automatically handles `remappings.txt` to correctly resolve import paths. It can also work in other environments with the appropriate remappings.
 - **Minimal Requirements**:
   - No Python, no Docker. No GitHub personal access tokens.
-  - You just need a list of contract addresses and an Etherscan API key (for certain networks).
+  - You just need a list of contract addresses and, when using explorer APIs for certain networks, an Etherscan API key.
 - **Modern and Flexible**:
   - Supports Etherscan's V2 multi-chain API, allowing a single API key to work across all supported networks.
-  - Automatically detects the endpoint for the given Chain ID (Etherscan, Routescan).
+  - Automatically detects the endpoint for the given Chain ID (Etherscan, Routescan, Blockscout).
+  - Can fetch sources from Sourcify when selected with `--source-provider sourcify`, or as a fallback with `--source-provider auto`.
   - Can be used as a standalone binary or as a Deno script within your existing TypeScript/JavaScript projects.
   - Can work against a local repo or another verified contract
 - **Secure by default**
@@ -49,6 +50,12 @@ Running `mirror verify` shows the diff between the given address(es) and the sou
 mirror verify --api-key <ETHERSCAN_API_KEY> 0x1234... 0x2345...
 ```
 
+To fetch from Sourcify instead of the configured explorer API:
+
+```sh
+mirror verify --source-provider sourcify --chain-id 1 0x1234...
+```
+
 #### Full verify example
 
 This command verifies contracts on the Sepolia testnet against a specific local directory and `remappings.txt` file.
@@ -64,7 +71,7 @@ mirror verify \
 
 #### Diff'ing two on-chain contracts
 
-Running `mirror diff` shows the diff between two on-chain contracts verified on Etherscan. By default it targets Ethereum Mainnet and in certain networks, the API key is not required.
+Running `mirror diff` shows the diff between two on-chain contracts verified on an explorer API or Sourcify. By default it targets Ethereum Mainnet and in certain networks, the API key is not required.
 
 ```sh
 mirror diff \
@@ -75,7 +82,7 @@ mirror diff \
 
 #### Cloning a verified contract
 
-Running `mirror clone` downloads the verified source code from the block explorer and creates a local Foundry project that you can work with.
+Running `mirror clone` downloads the verified source code from the selected source provider and creates a local Foundry project that you can work with.
 
 ```sh
 mirror clone \
@@ -117,6 +124,7 @@ mirror diff --follow-proxy 0x1234... 0x5678...
 | --- | --- | --- | --- |
 | `--api-key` | `-k` | Your Etherscan API key. Required for most chains. | |
 | `--chain-id` | `-i` | The chain ID of the target network. | `1` (Ethereum Mainnet) |
+| `--source-provider` | `-p` | Source provider to use: `explorer`, `sourcify`, or `auto`. | `explorer` |
 | `--follow-proxy` | `-f` | Resolve proxy contracts to their implementation. | |
 | `--version` | | Show the version number. | |
 | `--help` | | Show the help message. | |
