@@ -1,6 +1,10 @@
-import { red } from "@std/fmt/colors";
+import { gray, red } from "@std/fmt/colors";
 import { ContractSourcesWithMeta } from "../types.ts";
 import { Provider, safeHost } from "./types.ts";
+
+/** Free-tier bursts recover in well under a second; one short sleep + retry
+ * keeps Etherscan as the source instead of falling through to Sourcify. */
+export const RATE_LIMIT_RETRY_DELAY_MS = 500;
 
 export type EtherscanConfig = {
   urlPrefix: string;
@@ -27,16 +31,40 @@ async function fetchEtherscan(
 
   const url =
     `${config.urlPrefix}&address=${address}&apikey=${config.apiKey ?? ""}`;
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  let data = await fetchEtherscanJson(url);
+
+  // Retry once if we tripped a rate limit — most likely a burst hitting the
+  // free-tier per-second cap. Anything else propagates and the resolver
+  // falls through to the next provider.
+  if (data.status !== "1" && isRateLimit(data.result)) {
+    console.log(gray("  rate limit hit, retrying once..."));
+    await sleep(RATE_LIMIT_RETRY_DELAY_MS);
+    data = await fetchEtherscanJson(url);
   }
-  const data = await response.json();
+
   if (data.status !== "1") {
     throw new Error(`${data.message} - ${data.result}`);
   }
+  return parseVerifiedSources(
+    address,
+    (data.result as EtherscanVerifiedContract[])[0],
+  );
+}
 
-  return parseVerifiedSources(address, data.result[0]);
+async function fetchEtherscanJson(
+  url: string,
+): Promise<{ status: string; message: string; result: unknown }> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return await response.json();
+}
+
+function isRateLimit(result: unknown): boolean {
+  return typeof result === "string" && /rate limit/i.test(result);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 export function parseVerifiedSources(

@@ -154,7 +154,7 @@ async function verifyContractsCmd(args: CliArguments) {
       ),
     );
   } else {
-    console.error(red("One or more contracts could not be verified"));
+    console.error(red("One or more contracts differ or have issues"));
     Deno.exit(1);
   }
 }

@@ -1,5 +1,5 @@
-import { assertEquals, assertThrows } from "@std/assert";
-import { parseVerifiedSources } from "./etherscan.ts";
+import { assertEquals, assertRejects, assertThrows } from "@std/assert";
+import { etherscanProvider, parseVerifiedSources } from "./etherscan.ts";
 
 // Minimal fixture — a valid Etherscan verified-contract response
 const baseResult = {
@@ -110,4 +110,91 @@ Deno.test("etherscan parser: OptimizationUsed='0' → optimizationUsed=false", (
   assertEquals(parsed.meta.optimizationUsed, false);
   // Runs defaults to 200 when unparseable / zero
   assertEquals(parsed.meta.runs, 200);
+});
+
+// fetchEtherscan retry behavior ----------------------------------------------
+
+type FetchStub = (input: string | URL | Request) => Promise<Response>;
+
+function withFetch(stub: FetchStub, fn: () => Promise<void>): Promise<void> {
+  const original = globalThis.fetch;
+  globalThis.fetch = stub as typeof globalThis.fetch;
+  return fn().finally(() => {
+    globalThis.fetch = original;
+  });
+}
+
+const goodResult = {
+  ...baseResult,
+  SourceCode: "contract F {}",
+  ContractName: "F",
+  ContractFileName: "F.sol",
+};
+
+Deno.test("etherscan fetch: retries once when the API reports a rate limit", async () => {
+  let calls = 0;
+  await withFetch(() => {
+    calls++;
+    const body = calls === 1
+      ? { status: "0", message: "NOTOK", result: "Max calls per sec rate limit reached (3/sec)" }
+      : { status: "1", message: "OK", result: [goodResult] };
+    return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+  }, async () => {
+    const p = etherscanProvider({ urlPrefix: "http://x/api?", chainId: "1" });
+    const result = await p.fetchSources(
+      "0x0000000000000000000000000000000000000001",
+    );
+    assertEquals(calls, 2);
+    assertEquals(result.meta.contractName, "F");
+  });
+});
+
+Deno.test("etherscan fetch: does NOT retry on non-rate-limit errors", async () => {
+  let calls = 0;
+  await withFetch(() => {
+    calls++;
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({
+          status: "0",
+          message: "NOTOK",
+          result: "Invalid API Key",
+        }),
+        { status: 200 },
+      ),
+    );
+  }, async () => {
+    const p = etherscanProvider({ urlPrefix: "http://x/api?", chainId: "1" });
+    await assertRejects(
+      () => p.fetchSources("0x0000000000000000000000000000000000000001"),
+      Error,
+      "Invalid API Key",
+    );
+    assertEquals(calls, 1);
+  });
+});
+
+Deno.test("etherscan fetch: retry that also fails throws the second error", async () => {
+  let calls = 0;
+  await withFetch(() => {
+    calls++;
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({
+          status: "0",
+          message: "NOTOK",
+          result: "Max calls per sec rate limit reached (3/sec)",
+        }),
+        { status: 200 },
+      ),
+    );
+  }, async () => {
+    const p = etherscanProvider({ urlPrefix: "http://x/api?", chainId: "1" });
+    await assertRejects(
+      () => p.fetchSources("0x0000000000000000000000000000000000000001"),
+      Error,
+      "rate limit",
+    );
+    assertEquals(calls, 2);
+  });
 });
