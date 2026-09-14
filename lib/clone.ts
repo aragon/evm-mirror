@@ -180,7 +180,7 @@ export function detectSourceRoot(contractFileName: string): string {
  * Fallback: detect remappings from file paths when metadata is not available.
  * Used for contracts verified without remapping info (e.g., older Hardhat verifications).
  */
-function detectRemappingsFromPaths(paths: string[]): string[] {
+export function detectRemappingsFromPaths(paths: string[]): string[] {
   const remappings = new Set<string>();
 
   for (const path of paths) {

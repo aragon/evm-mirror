@@ -25,23 +25,36 @@ fmt:
 cache:
     deno cache main.ts lib/providers/*_test.ts
 
-# Verify one or more on-chain contracts against local sources
-# Example: just verify 0xABC 0xDEF --chain-id 1
+# Verify contracts against local sources (see `mirror verify --help`)
 [group('run')]
 verify *args:
     deno run --allow-net --allow-read --allow-env={{allow_env}} main.ts verify {{args}}
 
-# Diff two on-chain contracts
-# Example: just diff 0xABC 0xDEF --chain-id 10
+# Diff two on-chain contracts (see `mirror diff --help`)
 [group('run')]
 diff *args:
     deno run --allow-net --allow-read --allow-env={{allow_env}} main.ts diff {{args}}
 
-# Clone a verified contract into a local Foundry project
-# Example: just clone 0xABC --output ./my-contract
+# Clone a verified contract into a local Foundry project (see `mirror clone --help`)
 [group('run')]
 clone *args:
     deno run --allow-net --allow-read --allow-env={{allow_env}} --allow-write main.ts clone {{args}}
+
+# Build the binary for the current platform
+[linux]
+[group('build')]
+build: build-linux
+
+# Build the binary for the current platform
+[macos]
+[group('build')]
+build:
+    just build-{{ if arch() == "aarch64" { "macos" } else { "macos-x86" } }}
+
+# Build the binary for the current platform
+[windows]
+[group('build')]
+build: build-win
 
 # Compile the linux (x86_64) binary
 [group('build')]
