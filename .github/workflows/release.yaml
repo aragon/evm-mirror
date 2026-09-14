@@ -29,6 +29,9 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Run tests
+        run: deno task test
+
       - name: Build Linux binary
         run: deno task build:linux && mv mirror mirror-linux
 
