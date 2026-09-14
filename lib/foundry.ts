@@ -1,4 +1,4 @@
-import { red, yellow } from "jsr:@std/fmt/colors";
+import { red, yellow } from "@std/fmt/colors";
 import { Remappings } from "./types.ts";
 import { normalizeLineEndings } from "./text.ts";
 

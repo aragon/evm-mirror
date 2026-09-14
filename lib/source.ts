@@ -1,7 +1,7 @@
-import { diff } from "jsr:@libs/diff";
+import { diff } from "@libs/diff";
 import { resolveLocalPath } from "./path.ts";
 import { normalizeLineEndings } from "./text.ts";
-import { green, red, bold, gray } from "jsr:@std/fmt/colors";
+import { green, red, bold, gray } from "@std/fmt/colors";
 import { ContractSources, Remappings } from "./types.ts";
 
 type DiffResult =
@@ -81,10 +81,10 @@ export async function diffWithLocalPath(
 
 /**
  * Compares the fetched source files against their local counterparts.
- * @param sourcesA A map of Etherscan file paths to their content.
- * @param sourcesB A map of Etherscan file paths to their content.
+ * @param sourcesA A map of file paths to their content.
+ * @param sourcesB A map of file paths to their content.
  */
-export function diffEtherscanSources(
+export function diffContractSources(
   sourcesA: ContractSources,
   sourcesB: ContractSources,
 ): Array<DiffResult> {

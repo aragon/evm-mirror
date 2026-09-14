@@ -1,6 +1,6 @@
-import { bold, gray, green, yellow } from "jsr:@std/fmt/colors";
-import { join, dirname } from "jsr:@std/path";
-import { ensureDir } from "jsr:@std/fs";
+import { bold, gray, green, yellow } from "@std/fmt/colors";
+import { join, dirname } from "@std/path";
+import { ensureDir } from "@std/fs";
 import { CompilerMeta, ContractSourcesWithMeta, Network } from "./types.ts";
 import { DEFAULT_SOLC_VERSION } from "./constants.ts";
 
