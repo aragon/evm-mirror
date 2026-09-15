@@ -93,3 +93,27 @@ Deno.test("sourcify parser: handles missing optimizer settings with sane default
   assertEquals(parsed.meta.runs, 200);
   assertEquals(parsed.meta.remappings, []);
 });
+
+Deno.test("sourcify parser: exposes proxyResolutionError in the response type", () => {
+  // Parser itself doesn't consume proxyResolutionError — the warning lives in
+  // fetchSourcify. Here we just confirm the parser doesn't blow up on an
+  // error-only proxyResolution (no isProxy, no implementations).
+  const raw: SourcifyContractResponse = {
+    match: "exact_match",
+    chainId: "1",
+    address: "0xABC",
+    sources: { "F.sol": { content: "// x" } },
+    compilation: {
+      compilerVersion: "0.8.0",
+      compilerSettings: {},
+      name: "F",
+      fullyQualifiedName: "F.sol:F",
+    },
+    proxyResolution: {
+      proxyResolutionError: "RPC unavailable",
+    },
+  };
+  const parsed = parseVerifiedSources("0xABC", raw);
+  // No proxy inferred when resolution failed — caller must not follow.
+  assertEquals(parsed.proxy, undefined);
+});

@@ -14,7 +14,6 @@ export function getArguments() {
       "r",
       "api-key",
       "k",
-      "etherscan-api-key",
       "api-url",
       "provider",
       "p",
@@ -37,7 +36,6 @@ export function getArguments() {
       "source-root": "sourceRoot",
       "chain-id": "chainId",
       "api-key": "apiKey",
-      "etherscan-api-key": "etherscanApiKey",
       "api-url": "apiUrl",
       "follow-proxy": "followProxy",
     },
@@ -46,25 +44,30 @@ export function getArguments() {
 
 /**
  * Merges CLI flags with environment variables into the resolver options.
- * Env vars fill slots the operator didn't override on the command line.
+ * The one API key (`--api-key` or `ETHERSCAN_API_KEY`) is Etherscan-only,
+ * never sent to Blockscout or Sourcify.
  */
 export function buildResolverOptions(args: CliArguments): ResolverOptions {
   const env = Deno.env;
   const provider = args.provider
     ? assertProviderName(args.provider)
     : undefined;
+  const apiUrl = args.apiUrl?.trim() || undefined;
+
+  // --api-url needs --provider to say which provider it targets. Silently
+  // ignoring it would run the command against the chain default instead.
+  if (apiUrl && !provider) {
+    throw new Error(
+      "--api-url requires --provider (etherscan|blockscout|sourcify) to say which provider it targets.",
+    );
+  }
 
   return {
     provider,
-    apiUrl: args.apiUrl?.trim() || undefined,
-    apiKey: args.apiKey?.trim() || undefined,
-    etherscanApiKey:
-      args.etherscanApiKey?.trim() ||
+    apiUrl,
+    etherscanApiKey: args.apiKey?.trim() ||
       env.get("ETHERSCAN_API_KEY")?.trim() ||
       undefined,
-    etherscanUrl: env.get("ETHERSCAN_URL")?.trim() || undefined,
-    blockscoutUrl: env.get("BLOCKSCOUT_URL")?.trim() || undefined,
-    sourcifyUrl: env.get("SOURCIFY_URL")?.trim() || undefined,
   };
 }
 

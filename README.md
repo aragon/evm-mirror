@@ -116,8 +116,7 @@ mirror diff --follow-proxy 0x1234... 0x5678...
 | Flag | Alias | Description | Default |
 | --- | --- | --- | --- |
 | `--chain-id` | `-i` | The chain ID of the target network. | `1` (Ethereum Mainnet) |
-| `--api-key` | `-k` | API key applied to whichever provider ends up being used. | |
-| `--etherscan-api-key` | | Etherscan-specific key. Wins over `--api-key` when Etherscan is selected. | |
+| `--api-key` | `-k` | Etherscan API key. Never sent to Blockscout or Sourcify. | |
 | `--provider` | `-p` | Force one of `etherscan`, `blockscout`, `sourcify`. Disables the fallback chain. | |
 | `--api-url` | | Endpoint override. Requires `--provider` to say which provider the URL is for. | |
 | `--follow-proxy` | `-f` | Resolve proxy contracts to their implementation. | |
@@ -139,25 +138,39 @@ mirror diff --follow-proxy 0x1234... 0x5678...
 
 ### Environment variables
 
-Mirror reads a small, fixed set of environment variables (it does not auto-load `.env` files: source them yourself if needed, e.g. `env $(cat .env | xargs) mirror ...`). The compiled binary only has permission to read these four variables:
+Mirror does not auto-load `.env` files. Env vars are intended for secrets; URL overrides go through `--provider … --api-url …`. The compiled binary only has permission to read one variable:
 
 | Variable | Effect |
 | --- | --- |
-| `ETHERSCAN_API_KEY` | Same as `--etherscan-api-key`. |
-| `ETHERSCAN_URL` | Override the Etherscan-compatible base URL for the run. |
-| `BLOCKSCOUT_URL` | Supply / override the Blockscout base URL for the run. |
-| `SOURCIFY_URL` | Override the Sourcify base URL (default: `https://sourcify.dev/server`). |
+| `ETHERSCAN_API_KEY` | Same as `--api-key`. |
 
-Setting a `*_URL` variable also promotes that provider to the front of the fallback chain, since it signals explicit intent.
+### `--api-url` format
+
+`--api-url` always requires `--provider`. What it expects depends on which provider you pin:
+
+- **`--provider etherscan`** — the **full URL prefix including the `chainid`, `module`, and `action` query parameters**, up to (but not including) `&address=`. Mirror appends `&address=…&apikey=…` to whatever you pass. Getting any of those three query params wrong silently returns the wrong sources; the safe way is to copy a working URL from `lib/networks.ts` and swap only the host.
+  ```sh
+  --provider etherscan \
+    --api-url "https://internal-proxy.corp.com/v2/api?chainid=1&module=contract&action=getsourcecode"
+  ```
+
+- **`--provider blockscout`** — a **base URL ending in `/api`**. Mirror appends `/v2/smart-contracts/{address}`.
+  ```sh
+  --provider blockscout --api-url https://my-scout.corp.com/api
+  ```
+
+- **`--provider sourcify`** — a **base URL** (trailing slash optional). Mirror appends `/v2/contract/{chainId}/{address}?fields=…`.
+  ```sh
+  --provider sourcify --api-url https://sourcify.mycompany.internal/server
+  ```
 
 ### Provider selection
 
 For each contract fetch, mirror builds an ordered list of providers and tries them top-to-bottom until one succeeds:
 
 1. **Pinned** — if `--provider` is set, only that one is tried. Combine with `--api-url` to point it at a custom host.
-2. **User-configured providers** — any provider you supplied a URL or key for (via env or flag) is tried first. Most-specific env wins.
-3. **Chain-mapped providers** — the primary provider known for the chain ID (Etherscan, Blockscout, etc.).
-4. **Sourcify fallback** — always the last-chance tail. Needs only the chain ID; no key required.
+2. **Chain-mapped providers** — the provider(s) known for the chain ID (Etherscan, Blockscout, etc.), in the order declared in `lib/networks.ts`.
+3. **Sourcify fallback** — always the last-chance tail. Needs only the chain ID; no key required.
 
 Unknown chains skip straight to Sourcify. Sourcify accepts both full and partial matches — partial matches mean the runtime bytecode is identical but the metadata region (file names, comments, formatting) may differ. Mirror prints `(partial match — metadata hash differs)` when this happens.
 
@@ -181,7 +194,7 @@ NOTE: Mirror assumes that you are verifying a project from the same repo that wa
 If you have Deno installed, you can run EVM Mirror directly from the source code.
 
 ```sh
-deno run --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL --allow-write main.ts verify \
+deno run --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY --allow-write main.ts verify \
   --api-key <ETHERSCAN_API_KEY> \
   --chain-id 11155111 \
   --source-root ../my-foundry-project \

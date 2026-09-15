@@ -1,10 +1,10 @@
 {
   "tasks": {
-    "build:linux": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL --allow-write --target x86_64-unknown-linux-gnu -o mirror main.ts",
-    "build:macos": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL --allow-write --target aarch64-apple-darwin -o mirror main.ts",
-    "build:macos:x86": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL --allow-write --target x86_64-apple-darwin -o mirror main.ts",
-    "build:win": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL --allow-write --target x86_64-pc-windows-msvc -o mirror.exe main.ts",
-    "test": "mkdir -p .test-tmp && deno test --allow-read --allow-write=.test-tmp --allow-env=ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL lib/"
+    "build:linux": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY --allow-write --target x86_64-unknown-linux-gnu -o mirror main.ts",
+    "build:macos": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY --allow-write --target aarch64-apple-darwin -o mirror main.ts",
+    "build:macos:x86": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY --allow-write --target x86_64-apple-darwin -o mirror main.ts",
+    "build:win": "deno compile --allow-net --allow-read --allow-env=ETHERSCAN_API_KEY --allow-write --target x86_64-pc-windows-msvc -o mirror.exe main.ts",
+    "test": "mkdir -p .test-tmp && deno test --allow-read --allow-write=.test-tmp --allow-env=ETHERSCAN_API_KEY lib/"
   },
   "imports": {
     "@libs/diff": "jsr:@libs/diff@^3.0.3",

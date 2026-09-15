@@ -1,12 +1,7 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import { buildResolverOptions, CliArguments } from "./cli.ts";
 
-const ENV_KEYS = [
-  "ETHERSCAN_API_KEY",
-  "ETHERSCAN_URL",
-  "BLOCKSCOUT_URL",
-  "SOURCIFY_URL",
-] as const;
+const ENV_KEYS = ["ETHERSCAN_API_KEY"] as const;
 
 /**
  * Runs `fn` with the four env vars set to the given values (undefined = unset),
@@ -45,54 +40,63 @@ Deno.test("buildResolverOptions: empty env + no flags → all undefined", () => 
     assertEquals(opts, {
       provider: undefined,
       apiUrl: undefined,
-      apiKey: undefined,
       etherscanApiKey: undefined,
-      etherscanUrl: undefined,
-      blockscoutUrl: undefined,
-      sourcifyUrl: undefined,
     });
   });
 });
 
-Deno.test("buildResolverOptions: env vars flow into resolver options", () => {
-  withEnv(
-    {
-      ETHERSCAN_API_KEY: "envkey",
-      ETHERSCAN_URL: "https://envscan/api",
-      BLOCKSCOUT_URL: "https://envscout/api",
-      SOURCIFY_URL: "https://envsourcify/server",
-    },
-    () => {
-      const opts = buildResolverOptions(args());
-      assertEquals(opts.etherscanApiKey, "envkey");
-      assertEquals(opts.etherscanUrl, "https://envscan/api");
-      assertEquals(opts.blockscoutUrl, "https://envscout/api");
-      assertEquals(opts.sourcifyUrl, "https://envsourcify/server");
-    },
-  );
+Deno.test("buildResolverOptions: ETHERSCAN_API_KEY env populates the key slot", () => {
+  withEnv({ ETHERSCAN_API_KEY: "envkey" }, () => {
+    const opts = buildResolverOptions(args());
+    assertEquals(opts.etherscanApiKey, "envkey");
+  });
 });
 
-Deno.test("buildResolverOptions: --etherscan-api-key flag wins over env", () => {
+Deno.test("buildResolverOptions: --api-url without --provider throws", () => {
+  withEnv({}, () => {
+    assertThrows(
+      () =>
+        buildResolverOptions(args({ apiUrl: "https://my-scout.internal/api" })),
+      Error,
+      "--api-url requires --provider",
+    );
+  });
+});
+
+Deno.test("buildResolverOptions: --api-url + --provider is accepted", () => {
+  withEnv({}, () => {
+    const opts = buildResolverOptions(
+      args({ apiUrl: "https://x/api", provider: "blockscout" }),
+    );
+    assertEquals(opts.apiUrl, "https://x/api");
+    assertEquals(opts.provider, "blockscout");
+  });
+});
+
+Deno.test("buildResolverOptions: --api-key flag wins over env", () => {
   withEnv({ ETHERSCAN_API_KEY: "envkey" }, () => {
-    const opts = buildResolverOptions(args({ etherscanApiKey: "flagkey" }));
+    const opts = buildResolverOptions(args({ apiKey: "flagkey" }));
     assertEquals(opts.etherscanApiKey, "flagkey");
   });
 });
 
-Deno.test("buildResolverOptions: --api-key stays generic (does not fill etherscanApiKey slot)", () => {
+Deno.test("buildResolverOptions: --api-key populates the (Etherscan-scoped) key slot", () => {
   withEnv({}, () => {
-    const opts = buildResolverOptions(args({ apiKey: "generic" }));
-    assertEquals(opts.apiKey, "generic");
-    assertEquals(opts.etherscanApiKey, undefined);
+    const opts = buildResolverOptions(args({ apiKey: "key123" }));
+    assertEquals(opts.etherscanApiKey, "key123");
+    // There is no separate generic `apiKey` slot on resolver options.
+    assertEquals(
+      Object.prototype.hasOwnProperty.call(opts, "apiKey"),
+      false,
+    );
   });
 });
 
 Deno.test("buildResolverOptions: whitespace-only flags become undefined", () => {
   withEnv({}, () => {
     const opts = buildResolverOptions(
-      args({ apiKey: "   ", etherscanApiKey: "\t", apiUrl: "" }),
+      args({ apiKey: "\t", apiUrl: "" }),
     );
-    assertEquals(opts.apiKey, undefined);
     assertEquals(opts.etherscanApiKey, undefined);
     assertEquals(opts.apiUrl, undefined);
   });

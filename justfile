@@ -1,5 +1,5 @@
 # Env vars the binary is allowed to read (mirrors deno.json build tasks)
-allow_env := "ETHERSCAN_API_KEY,ETHERSCAN_URL,BLOCKSCOUT_URL,SOURCIFY_URL"
+allow_env := "ETHERSCAN_API_KEY"
 
 # Show available commands
 help:

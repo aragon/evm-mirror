@@ -251,8 +251,7 @@ Commands:
 
 Global options:
   -i, --chain-id            Chain ID of the network (default: 1)
-  -k, --api-key             API key applied to the resolved provider
-      --etherscan-api-key   Etherscan-specific key (wins over --api-key for Etherscan)
+  -k, --api-key             Etherscan API key (never sent to other providers)
   -p, --provider            Force one of: etherscan, blockscout, sourcify (disables fallback)
       --api-url             Endpoint override (requires --provider)
   -f, --follow-proxy        Resolve proxy contracts to their implementation
@@ -265,10 +264,7 @@ Clone options:
   -o, --output              Destination folder (default: ./<ContractName>)
 
 Environment variables:
-  ETHERSCAN_API_KEY         Same as --etherscan-api-key
-  ETHERSCAN_URL             Override the Etherscan-compatible base URL
-  BLOCKSCOUT_URL            Supply / override the Blockscout base URL
-  SOURCIFY_URL              Override the Sourcify base URL
+  ETHERSCAN_API_KEY         Same as --api-key
 
 Provider selection:
   Chain ID drives the default. Known chains map to Etherscan or Blockscout.

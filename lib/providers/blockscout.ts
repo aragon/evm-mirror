@@ -4,7 +4,6 @@ import { Provider, safeHost } from "./types.ts";
 export type BlockscoutConfig = {
   urlPrefix: string;
   chainId: string;
-  apiKey?: string;
 };
 
 export function blockscoutProvider(config: BlockscoutConfig): Provider {
@@ -21,10 +20,8 @@ async function fetchBlockscout(
 ): Promise<ContractSourcesWithMeta> {
   const base = config.urlPrefix.replace(/\/$/, "");
   const endpoint = `${base}/v2/smart-contracts/${address}`;
-  const headers: Record<string, string> = {};
-  if (config.apiKey) headers["api-key"] = config.apiKey;
 
-  const response = await fetch(endpoint, { headers });
+  const response = await fetch(endpoint);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }

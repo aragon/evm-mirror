@@ -1,4 +1,4 @@
-import { gray } from "@std/fmt/colors";
+import { gray, yellow } from "@std/fmt/colors";
 import { ContractSourcesWithMeta } from "../types.ts";
 import { Provider } from "./types.ts";
 
@@ -47,6 +47,18 @@ async function fetchSourcify(
   // runtime bytecode is identical — safe for diff/verify/clone).
   if (data.match === "match") {
     console.log(gray("  (partial match — metadata hash differs)"));
+  }
+
+  // Sourcify couldn't run its proxy RPC (unavailable, timeout, etc). Surface
+  // it: "proxy status unknown" is a distinct state from "confirmed not a
+  // proxy", and silently treating them the same means --follow-proxy would
+  // verify the wrapper without noticing.
+  if (data.proxyResolution?.proxyResolutionError) {
+    console.log(
+      yellow(
+        `  warning: Sourcify could not determine proxy status (${data.proxyResolution.proxyResolutionError})`,
+      ),
+    );
   }
 
   return parsed;
@@ -112,5 +124,6 @@ export type SourcifyContractResponse = {
     isProxy?: boolean;
     implementations?: Array<{ address: string }>;
     proxyType?: string;
+    proxyResolutionError?: string;
   };
 };

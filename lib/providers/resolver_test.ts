@@ -87,17 +87,9 @@ Deno.test("resolveProviders: pinned + --api-url routes to that provider", () => 
   assertEquals(list[0].label, "blockscout (my-scout.internal)");
 });
 
-Deno.test("resolveProviders: env BLOCKSCOUT_URL moves blockscout to front", () => {
-  // Chain-map lists Etherscan first, but the operator set BLOCKSCOUT_URL,
-  // signaling they want to try Blockscout first.
-  const list = resolveProviders(chainWithEtherscan, {
-    blockscoutUrl: "https://my-scout.internal/api",
-  }).map((p) => p.name);
-  assertEquals(list, ["blockscout", "etherscan", "sourcify"]);
-});
-
-Deno.test("resolveProviders: env ETHERSCAN_API_KEY does not duplicate etherscan", () => {
-  // Etherscan is already the chain default; the key shouldn't add a second entry.
+Deno.test("resolveProviders: --api-key alone does not duplicate Etherscan", () => {
+  // Etherscan is already the chain default; supplying a key must not add a
+  // second etherscan entry in front of the chain-map one.
   const list = resolveProviders(chainWithEtherscan, {
     etherscanApiKey: "abc",
   }).map((p) => p.name);
