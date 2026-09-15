@@ -167,3 +167,117 @@ Deno.test("fetchWithFallback: empty provider list throws", async () => {
     assertEquals(msg, "No providers available for this chain");
   }
 });
+
+// End-to-end wire-through: resolver → Provider → HTTP -----------------------
+
+function withFetch(
+  stub: (input: string | URL | Request) => Promise<Response>,
+  fn: () => Promise<void>,
+): Promise<void> {
+  const original = globalThis.fetch;
+  globalThis.fetch = stub as typeof globalThis.fetch;
+  return fn().finally(() => {
+    globalThis.fetch = original;
+  });
+}
+
+Deno.test("resolveProviders: pinned etherscan + --api-url reflects override in label", () => {
+  const list = resolveProviders(unknownChain, {
+    provider: "etherscan",
+    apiUrl:
+      "https://my-scan.internal/v2/api?chainid=1&module=contract&action=getsourcecode",
+  });
+  assertEquals(list.length, 1);
+  assertEquals(list[0].name, "etherscan");
+  assertEquals(list[0].label, "etherscan (my-scan.internal)");
+});
+
+Deno.test("resolveProviders: pinned sourcify + --api-url uses that base URL", async () => {
+  let capturedUrl = "";
+  await withFetch(
+    (input) => {
+      capturedUrl = input.toString();
+      return Promise.resolve(new Response("", { status: 404 }));
+    },
+    async () => {
+      const [p] = resolveProviders(unknownChain, {
+        provider: "sourcify",
+        apiUrl: "https://my-sourcify.internal/server",
+      });
+      await p
+        .fetchSources("0x0000000000000000000000000000000000000001")
+        .catch(() => {});
+      assertEquals(
+        capturedUrl.startsWith("https://my-sourcify.internal/server/v2/contract/"),
+        true,
+        `unexpected fetch URL: ${capturedUrl}`,
+      );
+    },
+  );
+});
+
+Deno.test("resolveProviders: --api-key flows through to the Etherscan HTTP URL", async () => {
+  let capturedUrl = "";
+  await withFetch(
+    (input) => {
+      capturedUrl = input.toString();
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            status: "1",
+            message: "OK",
+            result: [
+              {
+                SourceCode: "contract F {}",
+                ABI: "[]",
+                ContractName: "F",
+                CompilerVersion: "v0.8.0",
+                OptimizationUsed: "0",
+                Runs: "200",
+                EVMVersion: "paris",
+                ContractFileName: "F.sol",
+                Proxy: "0",
+                Implementation: "",
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+    },
+    async () => {
+      const [p] = resolveProviders(chainWithEtherscan, {
+        etherscanApiKey: "sekret",
+      });
+      await p.fetchSources("0x0000000000000000000000000000000000000001");
+      assertEquals(
+        capturedUrl.includes("apikey=sekret"),
+        true,
+        `expected apikey=sekret in URL; got: ${capturedUrl}`,
+      );
+    },
+  );
+});
+
+Deno.test("resolveProviders: Sourcify tail uses the built-in default URL", async () => {
+  let capturedUrl = "";
+  await withFetch(
+    (input) => {
+      capturedUrl = input.toString();
+      return Promise.resolve(new Response("", { status: 404 }));
+    },
+    async () => {
+      // Unknown chain has zero candidates — resolver produces only Sourcify,
+      // and with no override its base URL must be the built-in default.
+      const [p] = resolveProviders(unknownChain, {});
+      await p
+        .fetchSources("0x0000000000000000000000000000000000000001")
+        .catch(() => {});
+      assertEquals(
+        capturedUrl.startsWith("https://sourcify.dev/server/v2/contract/"),
+        true,
+        `unexpected fetch URL: ${capturedUrl}`,
+      );
+    },
+  );
+});
