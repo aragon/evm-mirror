@@ -11,6 +11,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   # When pushing to main or to a PR
   check:
@@ -124,38 +127,46 @@ jobs:
             artifacts/mirror-macos-aarch64/mirror-macos-aarch64.tar.gz
             artifacts/mirror-windows-x86_64/mirror-windows-x86_64.exe
 
-  # Regenerate the Homebrew formula pointing at the just-published release,
-  # then commit it back to main so the tap tracks the latest version.
-  # When you move the tap to a dedicated repo (see homebrew/README.md), swap
-  # the checkout `repository` + `token` to target that repo instead.
+  # Regenerate the Homebrew formula pointing at the just-published release
+  # and push it into the shared tap repo (aragon/homebrew-tap).
+  #
+  # Requires a repo secret `HOMEBREW_TAP_TOKEN` — a fine-grained PAT with
+  # `contents: write` scope on aragon/homebrew-tap. The render script accepts
+  # OUT_DIR so if the tap ever moves, only the checkout `repository` +
+  # `OUT_DIR` need to change here.
   publish-homebrew:
     name: Publish Homebrew formula
     needs: create-release
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout main
+      - name: Checkout evm-mirror (for the render script)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Checkout aragon/homebrew-tap
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: main
+          repository: aragon/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
 
       - name: Render Homebrew formula
         env:
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-        run: bash homebrew/scripts/render-formula.sh
+          OUT_DIR: tap
+        run: bash scripts/render-homebrew-formula.sh
 
       - name: Commit and push updated formula
+        working-directory: tap
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add homebrew/Formula/mirror.rb
+          git add Formula/mirror.rb
           if git diff --cached --quiet; then
             echo "Formula unchanged, nothing to commit."
           else
-            git commit -m "chore(homebrew): update formula for ${{ github.ref_name }}"
+            git commit -m "chore(mirror): update formula for ${{ github.ref_name }}"
             git push
           fi
