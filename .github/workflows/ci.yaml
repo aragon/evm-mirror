@@ -15,12 +15,9 @@ permissions:
   contents: read
 
 jobs:
-  # When pushing to main or to a PR
+  # Runs on every push, PR, and tag. Release jobs below gate on this passing.
   check:
-    name: Check & Test
-
-    # Run if not a tag
-    if: "!startsWith(github.ref, 'refs/tags/')"
+    name: Type-check & test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -37,10 +34,10 @@ jobs:
       - name: Run tests
         run: deno task test
 
-  # Pushing a tag: create a release
+  # Tag push: compile release binaries for every supported target.
   build-release:
     name: Build Release Binaries
-
+    needs: check
     if: "startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
     strategy:
@@ -74,9 +71,6 @@ jobs:
         uses: denoland/setup-deno@4606d5cc6fb3f673efd4f594850e3f4b3e9d29cd # v2
         with:
           deno-version: v2.x
-
-      - name: Run tests
-        run: deno task test
 
       - name: Compile application
         run: deno task ${{ matrix.target.task }}
