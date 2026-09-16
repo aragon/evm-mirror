@@ -112,7 +112,8 @@ export function parseVerifiedSources(
         result.meta.remappings = jsonInput.settings.remappings;
       }
     } catch (error) {
-      console.error(red("Failed to parse Solidity JSON-Input:"), error);
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(red("Failed to parse Solidity JSON-Input:"), msg);
       result.sources[`${sourceResult.ContractName}.sol`] = sourceCode;
     }
   } else {

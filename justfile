@@ -43,7 +43,8 @@ clone *args:
 # Build the binary for the current platform
 [linux]
 [group('build')]
-build: build-linux
+build:
+    just build-{{ if arch() == "aarch64" { "linux-arm" } else { "linux" } }}
 
 # Build the binary for the current platform
 [macos]
@@ -60,6 +61,11 @@ build: build-win
 [group('build')]
 build-linux:
     deno task build:linux
+
+# Compile the linux (aarch64) binary
+[group('build')]
+build-linux-arm:
+    deno task build:linux:arm
 
 # Compile the macOS (aarch64) binary
 [group('build')]
@@ -78,7 +84,7 @@ build-win:
 
 # Compile binaries for every supported target
 [group('build')]
-build-all: build-linux build-macos build-macos-x86 build-win
+build-all: build-linux build-linux-arm build-macos build-macos-x86 build-win
 
 # Remove built binaries from the working tree
 [group('build')]
