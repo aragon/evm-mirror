@@ -1,3 +1,9 @@
 # Binaries
 mirror
 mirror.exe
+
+# Local env
+.env
+
+# Test scratch directory (created by `deno task test`)
+.test-tmp/

@@ -1,7 +1,3 @@
-import { SUPPORTED_CHAIN_IDS } from "./constants.ts";
-
-export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
-
 export type ContractSources = {
   address: string;
   sources: { [k: string]: string };
@@ -26,9 +22,15 @@ export type ContractSourcesWithMeta = ContractSources & {
 
 export type Remappings = Record<string, string>;
 
+/**
+ * A single provider entry attached to a chain. The resolver instantiates one
+ * `Provider` per candidate, in order, and falls through on failure.
+ */
+export type NetworkCandidate =
+  | { kind: "etherscan"; urlPrefix: string; requiresApiKey?: boolean }
+  | { kind: "blockscout"; urlPrefix: string };
+
 export type Network = {
-  type: "etherscan" | "blockscout";
-  urlPrefix: string;
-  requiresApiKey?: boolean;
-  chainId: SupportedChainId;
+  chainId: string;
+  candidates: NetworkCandidate[];
 };

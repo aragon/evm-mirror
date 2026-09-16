@@ -14,22 +14,25 @@ on:
 jobs:
   # When pushing to main or to a PR
   check:
-    name: Run Deno Check
+    name: Check & Test
 
     # Run if not a tag
     if: "!startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@4606d5cc6fb3f673efd4f594850e3f4b3e9d29cd # v2
         with:
           deno-version: v2.x
 
-      - name: Run Deno Check
+      - name: Type check
         run: deno check main.ts
+
+      - name: Run tests
+        run: deno task test
 
   # Pushing a tag: create a release
   build-release:
@@ -41,35 +44,34 @@ jobs:
       matrix:
         target:
           - name: mirror-linux-x86_64
-            os: x86_64-unknown-linux-gnu
+            task: build:linux
             asset_name: mirror
           - name: mirror-macos-x86_64
-            os: x86_64-apple-darwin
+            task: build:macos:x86
             asset_name: mirror
           - name: mirror-macos-aarch64
-            os: aarch64-apple-darwin
+            task: build:macos
             asset_name: mirror
           - name: mirror-windows-x86_64
-            os: x86_64-pc-windows-msvc
+            task: build:win
             asset_name: mirror.exe
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v1
+        uses: denoland/setup-deno@4606d5cc6fb3f673efd4f594850e3f4b3e9d29cd # v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
+
+      - name: Run tests
+        run: deno task test
 
       - name: Compile application
-        run: |
-          deno compile --allow-net --allow-read \
-            --target ${{ matrix.target.os }} \
-            -o ${{ matrix.target.asset_name }} \
-            main.ts
+        run: deno task ${{ matrix.target.task }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.target.name }}
           path: ${{ matrix.target.asset_name }}
@@ -85,7 +87,7 @@ jobs:
       contents: write # Create the release and upload assets
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts
 
@@ -93,7 +95,7 @@ jobs:
         run: ls -R artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true
           files: |

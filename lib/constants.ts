@@ -1,26 +1,32 @@
-export const MIRROR_VERSION = "0.14.1";
+export const MIRROR_VERSION = "0.15.0";
 
 export const DEFAULT_SOLC_VERSION = "0.8.28";
 
-export const SUPPORTED_CHAIN_IDS = [
-  // Etherscan
-  "1", // Mainnet
-  "137", // Polygon
-  "42161", // Arbitrum
-  "8453", // Base
-  "10", // Optimism
-  "167000", // Taiko
-  "324", // ZkSync
-  // Etherscan (testnets)
-  "11155111", // Sepolia
-  "17000", // Holesky
-  "300", // ZkSync Sepolia
+/**
+ * Named chain IDs used throughout the codebase. Values are the on-chain IDs
+ * as strings (matching the format returned by every JSON-RPC and CLI arg).
+ * Reference these constants instead of writing bare numeric literals.
+ */
+export const CHAINS = {
+  // Etherscan V2 (unified API, one key)
+  MAINNET: "1",
+  OPTIMISM: "10",
+  POLYGON: "137",
+  ZKSYNC_SEPOLIA: "300",
+  ZKSYNC: "324",
+  BASE: "8453",
+  ARBITRUM: "42161",
+  TAIKO: "167000",
+  SEPOLIA: "11155111",
 
-  // Routescan
-  "43114", // Avalanche
-  "21000000", // Corn
-  "88888", // Chiliz
+  // Routescan (Etherscan-compatible)
+  AVALANCHE: "43114",
+  CHILIZ: "88888",
+  CORN: "21000000",
 
-  // BlockScout
-  "747474", // Katana
-] as const;
+  // Blockscout
+  MONAD: "143",
+  CITREA: "4114",
+  HEMI: "43111",
+  KATANA: "747474",
+} as const;
