@@ -11,6 +11,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   # When pushing to main or to a PR
   check:
@@ -45,16 +48,24 @@ jobs:
         target:
           - name: mirror-linux-x86_64
             task: build:linux
-            asset_name: mirror
+            binary: mirror
+            archive: tar
+          - name: mirror-linux-aarch64
+            task: build:linux:arm
+            binary: mirror
+            archive: tar
           - name: mirror-macos-x86_64
             task: build:macos:x86
-            asset_name: mirror
+            binary: mirror
+            archive: tar
           - name: mirror-macos-aarch64
             task: build:macos
-            asset_name: mirror
+            binary: mirror
+            archive: tar
           - name: mirror-windows-x86_64
             task: build:win
-            asset_name: mirror.exe
+            binary: mirror.exe
+            archive: none
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -70,11 +81,22 @@ jobs:
       - name: Compile application
         run: deno task ${{ matrix.target.task }}
 
+      - name: Package binary (tar.gz for Homebrew-friendly hosts)
+        if: matrix.target.archive == 'tar'
+        run: tar -czf ${{ matrix.target.name }}.tar.gz ${{ matrix.target.binary }}
+
+      - name: Package binary (raw exe for Windows)
+        if: matrix.target.archive == 'none'
+        run: mv ${{ matrix.target.binary }} ${{ matrix.target.name }}.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.target.name }}
-          path: ${{ matrix.target.asset_name }}
+          path: |
+            ${{ matrix.target.name }}.tar.gz
+            ${{ matrix.target.name }}.exe
+          if-no-files-found: error
           retention-days: 1
 
   # After build-release
@@ -99,7 +121,52 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            artifacts/mirror-linux-x86_64/mirror
-            artifacts/mirror-macos-x86_64/mirror
-            artifacts/mirror-macos-aarch64/mirror
-            artifacts/mirror-windows-x86_64/mirror.exe
+            artifacts/mirror-linux-x86_64/mirror-linux-x86_64.tar.gz
+            artifacts/mirror-linux-aarch64/mirror-linux-aarch64.tar.gz
+            artifacts/mirror-macos-x86_64/mirror-macos-x86_64.tar.gz
+            artifacts/mirror-macos-aarch64/mirror-macos-aarch64.tar.gz
+            artifacts/mirror-windows-x86_64/mirror-windows-x86_64.exe
+
+  # Regenerate the Homebrew formula pointing at the just-published release
+  # and push it into the shared tap repo (aragon/homebrew-tap).
+  #
+  # Requires a repo secret `HOMEBREW_TAP_TOKEN` — a fine-grained PAT with
+  # `contents: write` scope on aragon/homebrew-tap. The render script accepts
+  # OUT_DIR so if the tap ever moves, only the checkout `repository` +
+  # `OUT_DIR` need to change here.
+  publish-homebrew:
+    name: Publish Homebrew formula
+    needs: create-release
+    if: "startsWith(github.ref, 'refs/tags/')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout evm-mirror (for the render script)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Checkout aragon/homebrew-tap
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: aragon/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Render Homebrew formula
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          OUT_DIR: tap
+        run: bash scripts/render-homebrew-formula.sh
+
+      - name: Commit and push updated formula
+        working-directory: tap
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/mirror.rb
+          if git diff --cached --quiet; then
+            echo "Formula unchanged, nothing to commit."
+          else
+            git commit -m "chore(mirror): update formula for ${{ github.ref_name }}"
+            git push
+          fi

@@ -32,27 +32,31 @@ jobs:
       - name: Run tests
         run: deno task test
 
-      - name: Build Linux binary
-        run: deno task build:linux && mv mirror mirror-linux
+      - name: Build Linux (x86_64)
+        run: deno task build:linux && tar -czf mirror-linux-x86_64.tar.gz mirror && rm mirror
 
-      - name: Build macOS binary (ARM64)
-        run: deno task build:macos && mv mirror mirror-macos-aarch64
+      - name: Build Linux (aarch64)
+        run: deno task build:linux:arm && tar -czf mirror-linux-aarch64.tar.gz mirror && rm mirror
 
-      - name: Build macOS binary (x86_64)
-        run: deno task build:macos:x86 && mv mirror mirror-macos-x86_64
+      - name: Build macOS (aarch64)
+        run: deno task build:macos && tar -czf mirror-macos-aarch64.tar.gz mirror && rm mirror
 
-      - name: Build Windows binary
-        run: deno task build:win
+      - name: Build macOS (x86_64)
+        run: deno task build:macos:x86 && tar -czf mirror-macos-x86_64.tar.gz mirror && rm mirror
+
+      - name: Build Windows (x86_64)
+        run: deno task build:win && mv mirror.exe mirror-windows-x86_64.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-binaries
           path: |
-            mirror-linux
-            mirror-macos-aarch64
-            mirror-macos-x86_64
-            mirror.exe
+            mirror-linux-x86_64.tar.gz
+            mirror-linux-aarch64.tar.gz
+            mirror-macos-aarch64.tar.gz
+            mirror-macos-x86_64.tar.gz
+            mirror-windows-x86_64.exe
           retention-days: 7
 
   create-release:
@@ -79,7 +83,8 @@ jobs:
           body: ${{ github.event.inputs.release_notes }}
           generate_release_notes: ${{ github.event.inputs.release_notes == '' }}
           files: |
-            artifacts/mirror-linux
-            artifacts/mirror-macos-aarch64
-            artifacts/mirror-macos-x86_64
-            artifacts/mirror.exe
+            artifacts/mirror-linux-x86_64.tar.gz
+            artifacts/mirror-linux-aarch64.tar.gz
+            artifacts/mirror-macos-aarch64.tar.gz
+            artifacts/mirror-macos-x86_64.tar.gz
+            artifacts/mirror-windows-x86_64.exe
