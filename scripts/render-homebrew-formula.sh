@@ -41,7 +41,7 @@ mkdir -p "$(dirname "$OUT")"
 
 cat > "$OUT" <<RUBY
 # This file is regenerated on every tag release by
-# aragon/evm-mirror → .github/workflows/mirror.yaml → publish-homebrew.
+# aragon/evm-mirror → .github/workflows/ci.yaml → publish-homebrew.
 # Do not edit by hand — changes will be overwritten.
 
 class Mirror < Formula
